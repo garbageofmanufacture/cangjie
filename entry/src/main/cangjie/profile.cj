@@ -1,4 +1,4 @@
-// profile.cj
+// entry/src/main/cangjie/profile.cj
 package ohos_app_cangjie_entry
 
 import ohos.base.*
@@ -9,13 +9,18 @@ import ohos.arkui.state_management.*
 @HybridComponentEntry
 @Component
 class ProfileView {
+    // 🌟 核心修复：跨语言入口必须使用 @State 接收 ArkTS 的 parameter 注入！
     @State var account: String = ""
     @State var username: String = ""
     @State var roleStr: String = "0"
+    @State var email: String = ""
+    @State var address: String = ""
+    @State var bio: String = ""
+    @State var avatarChar: String = ""
 
     public func build() {
         Column() {
-            // 顶部导航
+            // --- 顶部导航 ---
             Row() {
                 Button("返回").backgroundColor(Color.Transparent).fontColor(Color(0x333333)).fontSize(18)
                     .onClick({ _ =>
@@ -25,38 +30,80 @@ class ProfileView {
                 Text("个人中心").fontSize(22).fontWeight(FontWeight.Bold).layoutWeight(1).textAlign(TextAlign.Center).margin(right: 40)
             }.width(100.percent).height(60).backgroundColor(Color(0xFFFFFF))
 
-            // 用户卡片
-            Column() {
-                Text("农").fontSize(40).fontColor(Color(0xFFFFFF)).width(80).height(80)
-                    .backgroundColor(Color(0x0D9FFB)).borderRadius(40).textAlign(TextAlign.Center).margin(bottom: 15)
-
-                Row() {
-                    Text(this.username).fontSize(24).fontWeight(FontWeight.Bold)
-                    Text(if(this.roleStr == "1") { "管理员" } else { "普通农友" })
-                        .fontSize(12).fontColor(Color(0xFFFFFF))
-                        .backgroundColor(if(this.roleStr == "1") { Color(0xFF6B6B) } else { Color(0x0D9FFB) })
-                        .padding(left: 8, right: 8, top: 4, bottom: 4).borderRadius(12).margin(left: 10)
-                }.margin(bottom: 10)
-
-                Text("账号: " + this.account).fontSize(14).fontColor(Color(0x999999))
-            }.width(90.percent).padding(30).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
-
-            // 管理员专属功能
-            if (this.roleStr == "1") {
+            Scroll() {
                 Column() {
-                    Text("🛠️ 管理功能").fontSize(18).fontWeight(FontWeight.Bold).margin(bottom: 15)
-                    Button("管理帖子").width(100.percent).height(45).backgroundColor(Color(0xF5F5F5)).fontColor(Color(0xFF6B6B))
-                }.width(90.percent).padding(20).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
+
+                    // --- 1. 头像与身份区 ---
+                    Column() {
+                        Text(this.avatarChar)
+                            .fontSize(40).fontWeight(FontWeight.Bold).fontColor(Color(0xFFFFFF))
+                            .width(80).height(80).backgroundColor(if(this.roleStr == "1") { Color(0xFF6B6B) } else { Color(0x0D9FFB) }).borderRadius(40)
+                            .textAlign(TextAlign.Center).margin(bottom: 15)
+
+                        Row() {
+                            Text(this.username).fontSize(24).fontWeight(FontWeight.Bold).fontColor(Color(0x333333))
+
+                            Text(if(this.roleStr == "1") { "超级管理员" } else { "普通农友" })
+                                .fontSize(12).fontColor(Color(0xFFFFFF))
+                                .backgroundColor(if(this.roleStr == "1") { Color(0xFF6B6B) } else { Color(0x0D9FFB) })
+                                .padding(left: 8, right: 8, top: 4, bottom: 4).borderRadius(12).margin(left: 10)
+                        }.margin(bottom: 10)
+
+                        Text(this.bio).fontSize(14).fontColor(Color(0x666666)).margin(bottom: 8).textAlign(TextAlign.Center)
+                        Text("账号: " + this.account).fontSize(12).fontColor(Color(0x999999))
+                    }.width(90.percent).padding(30).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
+
+                    // --- 2. 基础信息区 ---
+                    Column() {
+                        Row() {
+                            Text("基本信息").fontSize(18).fontWeight(FontWeight.Bold).fontColor(Color(0x333333))
+                            Blank()
+                            Button("✎ 编辑资料").fontSize(14).fontColor(Color(0x0D9FFB)).backgroundColor(Color.Transparent).height(30)
+                                .onClick({ _ =>
+                                    let optFn = globalJSFunction.get("OpenEditDialog")
+                                    if (let Some(fn) <- optFn) { fn() }
+                                })
+                        }.width(100.percent).margin(bottom: 15)
+
+                        Row() {
+                            Text("📧 邮箱").fontSize(16).fontColor(Color(0x333333))
+                            Blank()
+                            Text(this.email).fontSize(16).fontColor(Color(0x888888))
+                        }.width(100.percent).margin(bottom: 15)
+
+                        Divider().color(Color(0xF0F0F0)).margin(bottom: 15)
+
+                        Row() {
+                            Text("📍 地址").fontSize(16).fontColor(Color(0x333333))
+                            Blank()
+                            Text(this.address).fontSize(16).fontColor(Color(0x888888))
+                        }.width(100.percent)
+
+                    }.width(90.percent).padding(20).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
+
+                    // --- 3. 管理员面板 ---
+                    if (this.roleStr == "1") {
+                        Column() {
+                            Text("🛠️ 管理功能").fontSize(18).fontWeight(FontWeight.Bold).margin(bottom: 15).width(100.percent).textAlign(TextAlign.Start)
+                            Button("系统数据大屏 (演示)").width(100.percent).height(45).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF6B6B))
+                        }.width(90.percent).padding(20).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
+                    }
+
+                    Blank().height(40)
+
+                    // --- 4. 退出按钮 ---
+                    Button("退出登录").width(80.percent).height(50).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF4D4F))
+                        .margin(bottom: 40)
+                        .onClick({ _ =>
+                            let optFn = globalJSFunction.get("LogoutUser")
+                            if (let Some(fn) <- optFn) { fn() }
+                        })
+                }
+                .width(100.percent)
+                .constraintSize(minHeight: 100.percent)
             }
-
-            Blank()
-
-            Button("退出登录").width(80.percent).height(50).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF4D4F))
-                .margin(bottom: 40)
-                .onClick({ _ =>
-                    let optFn = globalJSFunction.get("LogoutUser")
-                    if (let Some(fn) <- optFn) { fn() }
-                })
+            .width(100.percent)
+            .layoutWeight(1)
         }.width(100.percent).height(100.percent).backgroundColor(Color(0xF5F7FA))
     }
 }

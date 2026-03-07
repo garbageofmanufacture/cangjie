@@ -5,7 +5,7 @@ import { DatabaseHelper } from '../utils/DatabaseHelper';
 export struct PublishView {
   // 🌟 核心：接收外壳页面传进来的 TabsController，用于切换 Tab
   controller: TabsController = new TabsController();
-
+//新加页面
   @State newTitle: string = "";
   @State newContent: string = "";
 

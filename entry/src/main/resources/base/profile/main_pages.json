@@ -2,7 +2,6 @@
   "src": [
     "pages/Index",
     "pages/second",
-    "pages/login_manager",
     "pages/profile"
   ]
 }

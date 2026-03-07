@@ -4,7 +4,7 @@ import { CJHybridComponent } from '@cangjie/cjhybridcomponent';
 // 🌟 导入你的独立业务组件
 import { ForumView } from '../views/ForumView';
 import { PublishView } from '../views/PublishView';
-
+//导航
 @Entry
 @Component
 struct ForumHome {

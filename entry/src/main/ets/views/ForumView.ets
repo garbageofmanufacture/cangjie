@@ -7,7 +7,7 @@ import { DatabaseHelper } from '../utils/DatabaseHelper';
 // 假设你已经按照之前的回答把 PostItem 和 PostCardView 抽离了
 import { PostItem } from '../models/PostItem';
 import { PostCardView } from '../components/PostCardView';
-
+//发布页面
 @Component
 export struct ForumView {
   @State dbPostsData: string = "";
