@@ -6,9 +6,9 @@ import { promptAction, router } from '@kit.ArkUI';
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 
-// 定义帖子数据结构
+// 🌟 数据结构：包含帖子 ID，用于精准删除
 class PostItem {
-  id: number = 0; // 增加 ID 方便删除
+  id: number = 0;
   title: string = '';
   author: string = '';
   time: string = '';
@@ -25,108 +25,104 @@ struct ForumHome {
   @State newTitle: string = "";
   @State newContent: string = "";
 
-  // 🌟 1. 新增：用户角色状态 (0:普通, 1:管理员)
+  // 🌟 管理员角色状态 (0:普通, 1:管理员)
   @State userRole: number = 0;
 
   async aboutToAppear() {
-    // 读取当前登录用户的角色
+    // 1. 读取当前登录用户的角色
     let context = getContext(this) as common.UIAbilityContext;
     let pref = await preferences.getPreferences(context, 'LoginPrefs');
     this.userRole = pref.getSync('logged_in_user_role', 0) as number;
 
+    // 2. 加载数据
     await this.loadPostsFromDB();
   }
 
-  // 1. 查库逻辑
-  async loadPostsFromDB() {
-    let store = DatabaseHelper.getStore();
-    if (!store) return;
-
-    try {
-      let predicates = new relationalStore.RdbPredicates("Post");
-      predicates.orderByDesc("created_at");
-      let resultSet = await store.query(predicates);
-      let dataStr = "";
-
-      while (resultSet.goToNextRow()) {
-        // 读取数据库原始数据，增加 ID 字段读取
-        let id = resultSet.getLong(resultSet.getColumnIndex("id"));
-        let title = resultSet.getString(resultSet.getColumnIndex("title")) || "无标题";
-        let author = resultSet.getString(resultSet.getColumnIndex("author_id")) || "匿名";
-        let content = resultSet.getString(resultSet.getColumnIndex("content")) || "无内容";
-
-        // 组装结构：ID|标题|作者|时间|内容 (注意解析函数也要对应修改)
-        dataStr += `${id}|${title}|${author}|03-07|${content}^`;
+  // 🌟 ArkTS 原生通用删除弹窗
+  confirmDelete(tableName: string, id: number) {
+    AlertDialog.show({
+      title: '🛡️ 管理员特权',
+      message: '确定要永久删除这条违规帖子吗？操作不可恢复。',
+      primaryButton: { value: '取消', action: () => {} },
+      secondaryButton: {
+        value: '确认删除',
+        fontColor: '#FF4D4F',
+        action: () => {
+          this.deleteDataFromDB(tableName, id);
+        }
       }
-      resultSet.close();
-
-      if (dataStr.length > 0) {
-        this.dbPostsData = dataStr.substring(0, dataStr.length - 1);
-      } else {
-        this.dbPostsData = ""; // 显式清空防止残留
-      }
-    } catch (err) {
-      console.error("读取数据库失败");
-    }
+    })
   }
 
-  // 2. 修正后的发布逻辑：先保存值，再清空 UI，最后存库
-  async publishPost() {
-    if (this.newTitle.trim() === '' || this.newContent.trim() === '') {
-      promptAction.showToast({ message: '标题和内容不能为空' });
-      return;
-    }
-
-    // 🌟 核心修复：先暂存要发布的内容，防止清空逻辑导致写入数据库为空字符串
-    const titleToSave = this.newTitle;
-    const contentToSave = this.newContent;
-
-    // 内存秒拼显示 (ID 暂时给个临时值 0)
-    let newPostStr = `0|${titleToSave}|热心农友|03-07|${contentToSave}`;
-    this.dbPostsData = this.dbPostsData ? (newPostStr + "^" + this.dbPostsData) : newPostStr;
-
-    promptAction.showToast({ message: '发布成功！' });
-
-    // 现在可以安全地清空 UI 了
-    this.newTitle = "";
-    this.newContent = "";
-    this.currentIndex = 0;
-    this.tabsController.changeIndex(0);
-
-    // 后台存库
-    let store = DatabaseHelper.getStore();
-    if (store) {
-      try {
-        let values: relationalStore.ValuesBucket = {
-          "author_id": "热心农友",
-          "title": titleToSave,
-          "content": contentToSave
-        };
-        await store.insert("Post", values);
-        // 重新从数据库刷一遍以获取真实的 ID
-        await this.loadPostsFromDB();
-      } catch(e) {
-        console.error("存库失败: " + JSON.stringify(e));
-      }
-    }
-  }
-
-  // 🌟 3. 新增：管理员删除功能
-  async deletePost(id: number) {
+  // 🌟 ArkTS 原生物理删除方法
+  async deleteDataFromDB(tableName: string, id: number) {
     let store = DatabaseHelper.getStore();
     if (!store) return;
     try {
-      let predicates = new relationalStore.RdbPredicates("Post");
+      let predicates = new relationalStore.RdbPredicates(tableName);
       predicates.equalTo("id", id);
       await store.delete(predicates);
-      promptAction.showToast({ message: '管理员已删除该帖' });
-      await this.loadPostsFromDB(); // 刷新列表
+      promptAction.showToast({ message: '管理员已执行删除' });
+      // 删完后重新查库刷新列表
+      await this.loadPostsFromDB();
     } catch (err) {
       promptAction.showToast({ message: '删除失败' });
     }
   }
 
-  // 4. 解析字符串工具函数 (适配增加 ID 后的 5 段结构)
+  // 查库逻辑
+  async loadPostsFromDB() {
+    let store = DatabaseHelper.getStore();
+    if (!store) return;
+    try {
+      let predicates = new relationalStore.RdbPredicates("Post");
+      predicates.orderByDesc("created_at");
+      let resultSet = await store.query(predicates);
+      let dataStr = "";
+      while (resultSet.goToNextRow()) {
+        let id = resultSet.getLong(resultSet.getColumnIndex("id"));
+        let title = resultSet.getString(resultSet.getColumnIndex("title")) || "无标题";
+        let author = resultSet.getString(resultSet.getColumnIndex("author_id")) || "匿名";
+        let content = resultSet.getString(resultSet.getColumnIndex("content")) || "无内容";
+        // 注意拼接格式加入了 id
+        dataStr += `${id}|${title}|${author}|03-07|${content}^`;
+      }
+      resultSet.close();
+      this.dbPostsData = dataStr.length > 0 ? dataStr.substring(0, dataStr.length - 1) : "";
+    } catch (err) { console.error("读取数据库失败"); }
+  }
+
+  // 发布逻辑
+  async publishPost() {
+    if (this.newTitle.trim() === '' || this.newContent.trim() === '') {
+      promptAction.showToast({ message: '标题和内容不能为空' });
+      return;
+    }
+    const titleToSave = this.newTitle;
+    const contentToSave = this.newContent;
+
+    // 内存预填充显示 (临时 ID 给 0)
+    let newPostStr = `0|${titleToSave}|热心农友|03-07|${contentToSave}`;
+    this.dbPostsData = this.dbPostsData ? (newPostStr + "^" + this.dbPostsData) : newPostStr;
+
+    promptAction.showToast({ message: '发布成功！' });
+    this.newTitle = "";
+    this.newContent = "";
+    this.currentIndex = 0;
+    this.tabsController.changeIndex(0);
+
+    // 实际存库逻辑
+    let store = DatabaseHelper.getStore();
+    if (store) {
+      try {
+        await store.insert("Post", { "author_id": "热心农友", "title": titleToSave, "content": contentToSave });
+        // 存库成功后刷新获取真实 ID
+        await this.loadPostsFromDB();
+      } catch(e) { console.error("存库失败"); }
+    }
+  }
+
+  // 解析数据字符串
   getParsedPosts(): PostItem[] {
     let list: PostItem[] = [];
     if (!this.dbPostsData) return list;
@@ -134,21 +130,14 @@ struct ForumHome {
     for (let p of posts) {
       if (!p) continue;
       let parts = p.split("|");
-      // 这里的结构变为：ID|标题|作者|时间|内容 (长度需为 5)
       if (parts.length >= 5) {
-        list.push({
-          id: Number(parts[0]),
-          title: parts[1],
-          author: parts[2],
-          time: parts[3],
-          content: parts[4]
-        });
+        list.push({ id: Number(parts[0]), title: parts[1], author: parts[2], time: parts[3], content: parts[4] });
       }
     }
     return list;
   }
 
-  // 5. 增强版卡片 UI：增加管理员长按删除
+  // 🌟 帖子卡片 UI 组件
   @Builder PostCard(item: PostItem, bannerColor: string) {
     Column() {
       Row().width('100%').height(100).backgroundColor(bannerColor)
@@ -159,17 +148,13 @@ struct ForumHome {
       }.alignItems(HorizontalAlign.Start).padding(10).width('100%')
     }
     .backgroundColor('#FFFFFF').borderRadius(10).clip(true).margin({ bottom: 10 }).width('100%')
-    // 🌟 管理员特权：长按卡片弹出删除确认
+    // 🌟 纯 ArkTS 原生的长按删除，彻底告别报错！
     .gesture(
       LongPressGesture()
         .onAction(() => {
-          if (this.userRole === 1) { // 仅 admin 响应
-            AlertDialog.show({
-              title: '管理员管理',
-              message: '确定要删除这条违规帖子吗？',
-              primaryButton: { value: '取消', action: () => {} },
-              secondaryButton: { value: '删除', fontColor: '#FF4D4F', action: () => this.deletePost(item.id) }
-            })
+          // 如果是管理员，直接调用 ArkTS 的方法
+          if (this.userRole === 1) {
+            this.confirmDelete("Post", item.id);
           }
         })
     )
@@ -207,6 +192,7 @@ struct ForumHome {
           }.width('100%').height('100%').backgroundColor('#F5F5F5')
         }.tabBar(this.buildBottomNavItem("帖子", 0, $r('app.media.startIcon')))
 
+        // 问答板块 (去掉 parameter 传参防止仓颉报错)
         TabContent() { CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "expert_qa" }).width('100%').height('100%') }
         .tabBar(this.buildBottomNavItem("问答", 1, $r('app.media.startIcon')))
 
@@ -220,6 +206,7 @@ struct ForumHome {
           }.width('100%').height('100%').backgroundColor('#F5F5F5')
         }.tabBar(this.buildCenterPublishItem(2))
 
+        // 日历和商城板块
         TabContent() { CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "farm_calendar" }).width('100%').height('100%') }.tabBar(this.buildBottomNavItem("日历", 3, $r('app.media.startIcon')))
         TabContent() { CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "farm_mall" }).width('100%').height('100%') }.tabBar(this.buildBottomNavItem("商城", 4, $r('app.media.startIcon')))
       }

@@ -1,12 +1,11 @@
 // src/main/ets/utils/DatabaseHelper.ets
 import { relationalStore } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { common } from '@kit.AbilityKit'; // 👉 使用更精确的 UIAbilityContext 导入
+import { common } from '@kit.AbilityKit';
 
 export class DatabaseHelper {
   private static rdbStore: relationalStore.RdbStore | null = null;
 
-  // 👉 注意这里改成了 common.UIAbilityContext
   public static async initDb(context: common.UIAbilityContext): Promise<void> {
     const STORE_CONFIG: relationalStore.StoreConfig = {
       name: 'AgricultureForum.db',
@@ -17,6 +16,10 @@ export class DatabaseHelper {
       DatabaseHelper.rdbStore = await relationalStore.getRdbStore(context, STORE_CONFIG);
       hilog.info(0x0000, 'testTag', '✅ 数据库实例获取成功！');
       await DatabaseHelper.createTables();
+
+      // 🌟 核心步骤：初始化完成后立即检查并预设管理员
+      await DatabaseHelper.initAdminUser();
+
     } catch (err) {
       hilog.error(0x0000, 'testTag', `❌ 数据库初始化失败: ${JSON.stringify(err)}`);
     }
@@ -40,6 +43,34 @@ export class DatabaseHelper {
       hilog.info(0x0000, 'testTag', '✅ 所有核心数据表创建成功！');
     } catch (err) {
       hilog.error(0x0000, 'testTag', `❌ 建表执行失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  // 🌟 新增方法：预设管理员 admin 账号
+  private static async initAdminUser(): Promise<void> {
+    if (!DatabaseHelper.rdbStore) return;
+
+    try {
+      // 1. 检查 admin 是否已存在
+      let predicates = new relationalStore.RdbPredicates("User");
+      predicates.equalTo("user_id", "admin");
+      let resultSet = await DatabaseHelper.rdbStore.query(predicates);
+
+      if (resultSet.rowCount === 0) {
+        // 2. 如果不存在，插入 admin 账号，密码 123123，角色为 1 (管理员)
+        const values: relationalStore.ValuesBucket = {
+          "user_id": "admin",
+          "password": "123123",
+          "username": "超级管理员",
+          "role": 1,
+          "bio": "系统最高权限管理员"
+        };
+        await DatabaseHelper.rdbStore.insert("User", values);
+        hilog.info(0x0000, 'testTag', '🚀 已成功初始化默认管理员账号：admin');
+      }
+      resultSet.close();
+    } catch (err) {
+      hilog.error(0x0000, 'testTag', `❌ 初始化管理员失败: ${JSON.stringify(err)}`);
     }
   }
 
