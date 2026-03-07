@@ -2,10 +2,6 @@
   "src": [
     "pages/Index",
     "pages/second",
-    "pages/post_list",
-    "pages/expert_qa",
-    "pages/farm_calendar",
-    "pages/farm_mall",
     "pages/login_manager",
     "pages/profile"
   ]
