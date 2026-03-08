@@ -81,15 +81,32 @@ class ProfileView {
 
                     }.width(90.percent).padding(20).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
 
-                    // --- 3. 管理员面板 ---
-                    if (this.roleStr == "1") {
+                   // --- 3. 管理员面板 ---
+
+                    // 👇 🌟 视觉 Debug：直接把它显示在屏幕上！看看括号里到底是什么！
+                    Text("【Debug】当前接收到的权限值是: [" + this.roleStr + "]")
+                        .fontSize(14).fontColor(Color(0xFF0000)).margin(top: 20)
+
+                    // 👇 🌟 放宽条件：只要它包含 1，或者是 1.0，统统放行！
+                    if (this.roleStr == "1" || this.roleStr == "1.0" || this.roleStr != "0") {
                         Column() {
                             Text("🛠️ 管理功能").fontSize(18).fontWeight(FontWeight.Bold).margin(bottom: 15).width(100.percent).textAlign(TextAlign.Start)
+
+                            Row() {
+                                Text("🛡️ 帖子审核中心").fontSize(16).fontWeight(FontWeight.Bold).fontColor(Color(0xFF4D4F))
+                                Blank()
+                                Text("有新待办 >").fontSize(14).fontColor(Color(0xFFC300))
+                            }
+                            .width(100.percent).height(50).backgroundColor(Color(0xFFF0F0)).borderRadius(10).padding(left: 15, right: 15).margin(bottom: 15)
+                            .onClick({ _ =>
+                                let optFn = globalJSFunction.get("OpenAuditPage")
+                                if (let Some(fn) <- optFn) { fn() }
+                            })
+
                             Button("系统数据大屏 (演示)").width(100.percent).height(45).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF6B6B))
-                        }.width(90.percent).padding(20).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 20)
+                        }.width(90.percent).padding(20).backgroundColor(Color(0xFFFFFF)).borderRadius(15).margin(top: 10)
                     }
 
-                    Blank().height(40)
 
                     // --- 4. 退出按钮 ---
                     Button("退出登录").width(80.percent).height(50).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF4D4F))

@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/second",
     "pages/profile",
-    "pages/post_detail"
+    "pages/post_detail",
+    "pages/audit_list"
   ]
 }

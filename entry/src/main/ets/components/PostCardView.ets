@@ -24,6 +24,7 @@ export struct PostCardView {
       router.pushUrl({
         url: 'pages/post_detail', // 🚨 注意：这里必须和 main_pages.json 里的拼写大小写一模一样！
         params: {
+          id: this.item.id,
           title: this.item.title,
           author: this.item.author,
           time: this.item.time,
