@@ -33,13 +33,14 @@ export class DatabaseHelper {
     const sqlQA = `CREATE TABLE IF NOT EXISTS ExpertQA (id INTEGER PRIMARY KEY AUTOINCREMENT, questioner_id TEXT NOT NULL, expert_id TEXT, question TEXT NOT NULL, answer TEXT, status INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
     const sqlCalendar = `CREATE TABLE IF NOT EXISTS Calendar (id INTEGER PRIMARY KEY AUTOINCREMENT, solar_term TEXT NOT NULL, advice TEXT NOT NULL, crop_type TEXT)`;
     const sqlProduct = `CREATE TABLE IF NOT EXISTS Product (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, stock INTEGER DEFAULT 0, image_url TEXT)`;
-
+    const sqlComment = `CREATE TABLE IF NOT EXISTS Comment ( id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,author_id TEXT NOT NULL,content TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,parent_id INTEGER DEFAULT 0,target_author TEXT DEFAULT '')`;
     try {
       await DatabaseHelper.rdbStore.executeSql(sqlUser);
       await DatabaseHelper.rdbStore.executeSql(sqlPost);
       await DatabaseHelper.rdbStore.executeSql(sqlQA);
       await DatabaseHelper.rdbStore.executeSql(sqlCalendar);
       await DatabaseHelper.rdbStore.executeSql(sqlProduct);
+      await DatabaseHelper.rdbStore.executeSql(sqlComment);
       hilog.info(0x0000, 'testTag', '✅ 所有核心数据表创建成功！');
     } catch (err) {
       hilog.error(0x0000, 'testTag', `❌ 建表执行失败: ${JSON.stringify(err)}`);

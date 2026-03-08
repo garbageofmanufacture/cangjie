@@ -45,8 +45,6 @@ struct ProfilePage {
   @State bio: string = '';
   @State avatarChar: string = '农';
   @State isDataReady: boolean = false;
-
-  // 🌟 终极刷新杀手锏：每次保存资料，就让它自增，彻底强制仓颉组件刷新！
   @State refreshKey: number = 0;
 
   editDialogController: CustomDialogController = new CustomDialogController({
@@ -62,9 +60,15 @@ struct ProfilePage {
     let context = getContext(this) as common.UIAbilityContext;
     let pref = await preferences.getPreferences(context, 'LoginPrefs');
 
-    this.roleStr = (pref.getSync('logged_in_user_role', 0) as number).toString();
+    // 👇 🌟 核心修改区：优先从上一个页面(second.ets)接收路由参数
+    let params = router.getParams() as Record<string, string>;
+    if (params && params['roleStr'] !== undefined) {
+      this.roleStr = params['roleStr']; // 接住 second.ets 传来的参数
+    } else {
+      this.roleStr = (pref.getSync('logged_in_user_role', 0) as number).toString(); // 没有传参再从缓存读
+    }
+    // 👆 核心修改区结束
 
-    // 逻辑分流：精准派发数据
     if (this.roleStr === '1') {
       this.username = '超级管理员';
       this.account = 'admin';
@@ -82,6 +86,12 @@ struct ProfilePage {
 
     cjlib.registerJSFunc('ProfileGoBack', () => { router.back(); });
     cjlib.registerJSFunc('OpenEditDialog', () => { this.editDialogController.open(); });
+
+    // 👇 🌟 之前新增的：向仓颉注册“打开审核页”的跨端能力
+    cjlib.registerJSFunc('OpenAuditPage', () => {
+      router.pushUrl({ url: 'pages/audit_list' });
+    });
+
     cjlib.registerJSFunc('LogoutUser', async () => {
       let pref2 = await preferences.getPreferences(context, 'LoginPrefs');
       await pref2.clear();
@@ -96,6 +106,7 @@ struct ProfilePage {
   aboutToDisappear(): void {
     cjlib.unregisterJSFunc('ProfileGoBack');
     cjlib.unregisterJSFunc('OpenEditDialog');
+    cjlib.unregisterJSFunc('OpenAuditPage');
     cjlib.unregisterJSFunc('LogoutUser');
   }
 
@@ -106,10 +117,7 @@ struct ProfilePage {
       pref.putSync('logged_in_email', this.email);
       pref.putSync('logged_in_address', this.address);
       await pref.flush();
-
-      // 🌟 核心：保存成功后，强行改变状态变量
       this.refreshKey += 1;
-
       promptAction.showToast({ message: '资料保存成功' });
     } catch (err) {
       promptAction.showToast({ message: '保存失败' });
@@ -133,7 +141,6 @@ struct ProfilePage {
           }
         })
           .width('100%').height('100%')
-        // 🌟 把 refreshKey 加入绑定！只要数字一变，管你仓颉缓没缓存，必须给我重新拿新数据渲染！
           .key(this.account + this.roleStr + this.refreshKey.toString())
       }
     }.width('100%').height('100%').backgroundColor('#F5F7FA')

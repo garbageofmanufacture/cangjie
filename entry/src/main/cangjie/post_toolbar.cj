@@ -5,6 +5,7 @@ import ohos.base.*
 import ohos.arkui.component.*
 import ohos.arkui.state_macro_manage.*
 import ohos.arkui.state_management.*
+import std.time.DateTime
 
 @HybridComponentEntry
 @Component
@@ -22,6 +23,14 @@ class PostToolbar {
             }
             .layoutWeight(1).height(40).backgroundColor(Color(0xF5F5F5))
             .borderRadius(20).padding(left: 15).margin(right: 15)
+            // 👇 🌟 核心修改：加上点击事件，跨语言唤起 ArkTS 的弹窗
+            .onClick({ _ =>
+                println("🚀🚀🚀 【Cangjie侧】点击事件已触发！准备写入 AppStorage...")
+                // 将当前时间戳写入 AppStorage，确保每次点击值都不同，从而触发 ArkTS 侧的 @Watch
+                let timestamp = DateTime.now().toUnixTimeStamp().toMilliseconds()
+                AppStorage.setOrCreate<Int64>("triggerCommentDialog", timestamp)
+                println("🚀🚀🚀 【Cangjie侧】AppStorage 写入完成，当前值: ${timestamp}")
+            })
 
             // 2. 仓颉点赞动态组件
             Row() {
@@ -43,7 +52,7 @@ class PostToolbar {
         }
         .width(100.percent).height(60).backgroundColor(Color(0xFFFFFF))
         .padding(left: 15, right: 15)
-        // 顶部加一条细灰线作为分割
+        .border(width: 1, color: Color(0xF0F0F0)) // 补充你注释里说的顶部细灰线边框
 
     }
 }
