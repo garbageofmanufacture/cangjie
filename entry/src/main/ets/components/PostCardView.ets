@@ -1,12 +1,11 @@
 // src/main/ets/components/PostCardView.ets
 import { PostItem } from '../models/PostItem';
-
+import { router, promptAction } from '@kit.ArkUI';
 @Component
 export struct PostCardView {
   @Prop item: PostItem;
   @Prop bannerColor: string;
   @Prop userRole: number;
-  // 暴露一个删除回调给父组件，不在这里直接写弹窗逻辑
   onDeleteRequest: (id: number) => void = () => {};
 
   build() {
@@ -19,11 +18,30 @@ export struct PostCardView {
       }.alignItems(HorizontalAlign.Start).padding(10).width('100%')
     }
     .backgroundColor('#FFFFFF').borderRadius(10).clip(true).margin({ bottom: 10 }).width('100%')
+    // 🌟 核心：为卡片绑定点击跳转事件
+    .onClick(() => {
+      // 增加 Promise 的错误捕获机制
+      router.pushUrl({
+        url: 'pages/post_detail', // 🚨 注意：这里必须和 main_pages.json 里的拼写大小写一模一样！
+        params: {
+          title: this.item.title,
+          author: this.item.author,
+          time: this.item.time,
+          content: this.item.content
+        }
+      }).then(() => {
+        console.info("💡 跳转成功！");
+      }).catch((err: Error) => {
+        console.error("❌ 跳转失败: " + JSON.stringify(err));
+        promptAction.showToast({ message: '跳转失败，请检查路径: ' + err.message, duration: 3000 });
+      });
+    })
+    // 管理员的长按删除特权依然保留
     .gesture(
       LongPressGesture()
         .onAction(() => {
           if (this.userRole === 1) {
-            this.onDeleteRequest(this.item.id); // 触发父组件的删除方法
+            this.onDeleteRequest(this.item.id);
           }
         })
     )

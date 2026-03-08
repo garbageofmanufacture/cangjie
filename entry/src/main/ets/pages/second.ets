@@ -4,6 +4,8 @@ import { CJHybridComponent } from '@cangjie/cjhybridcomponent';
 // 🌟 导入你的独立业务组件
 import { ForumView } from '../views/ForumView';
 import { PublishView } from '../views/PublishView';
+import { FarmCalendarView } from '../views/FarmCalendarView';
+
 //导航
 @Entry
 @Component
@@ -28,27 +30,27 @@ struct ForumHome {
         // Tab 1: 论坛首页 (直接使用封装好的组件)
         TabContent() {
           ForumView()
-        }.tabBar(this.buildBottomNavItem("帖子", 0, $r('app.media.startIcon')))
+        }.tabBar(this.buildBottomNavItem("农事帖子", 0, $r('app.media.startIcon')))
 
         // Tab 2: 问答板块 (原有的 Cangjie 混合组件)
         TabContent() {
           CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "expert_qa" }).width('100%').height('100%')
-        }.tabBar(this.buildBottomNavItem("问答", 1, $r('app.media.startIcon')))
+        }.tabBar(this.buildBottomNavItem("专家问答", 1, $r('app.media.startIcon')))
 
         // Tab 3: 发布页
         TabContent() {
-          // 🌟 将 controller 传给发布页，让它拥有切换 Tab 的能力
           PublishView({ controller: this.tabsController })
         }.tabBar(this.buildCenterPublishItem(2))
 
-        // Tab 4 & 5: 仓颉组件
+        // Tab 4: 🌟 农事日历 (替换为带有 AI 的全新混合组件)
         TabContent() {
-          CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "farm_calendar" }).width('100%').height('100%')
-        }.tabBar(this.buildBottomNavItem("日历", 3, $r('app.media.startIcon')))
+          FarmCalendarView() // 👈 就是这里！用我们新写的视图替换掉旧的
+        }.tabBar(this.buildBottomNavItem("农事日历", 3, $r('app.media.startIcon')))
 
+        // Tab 5: 商城
         TabContent() {
           CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "farm_mall" }).width('100%').height('100%')
-        }.tabBar(this.buildBottomNavItem("商城", 4, $r('app.media.startIcon')))
+        }.tabBar(this.buildBottomNavItem("农事商城", 4, $r('app.media.startIcon')))
       }
       .onChange((index: number) => { this.currentIndex = index; })
       .scrollable(false).layoutWeight(1).width('100%').backgroundColor('#FFFFFF')
