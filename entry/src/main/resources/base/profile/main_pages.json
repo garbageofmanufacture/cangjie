@@ -4,6 +4,8 @@
     "pages/second",
     "pages/profile",
     "pages/post_detail",
-    "pages/audit_list"
+    "pages/audit_list",
+    "pages/qa_detail",
+    "pages/product_detail"
   ]
 }
