@@ -1,3 +1,7 @@
+export declare interface IJSCallback {
+    invoke: () => void
+}
+
 export declare interface CustomLib {
     registerJSFunc(name: string, fn: () => void): void
     unregisterJSFunc(name: string): void
@@ -5,4 +9,8 @@ export declare interface CustomLib {
     unregisterJSFunc(name: string): void
     registerJSFunc(name: string, fn: () => void): void
     unregisterJSFunc(name: string): void
+    registerJSFunc(name: string, fn: IJSCallback): void
+    getQA_Question(): string
+    getQA_Answer(): string
+    syncQA_Action(likes: number, dislikes: number): void
 }

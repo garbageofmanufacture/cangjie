@@ -25,7 +25,9 @@ class ProfileView {
                 Button("返回").backgroundColor(Color.Transparent).fontColor(Color(0x333333)).fontSize(18)
                     .onClick({ _ =>
                         let optFn = globalJSFunction.get("ProfileGoBack")
-                        if (let Some(fn) <- optFn) { fn() }
+                           if (let Some(fn) <- optFn) {
+                       fn.invoke()  // ✅ 正确调用接口内的方法
+}
                     })
                 Text("个人中心").fontSize(22).fontWeight(FontWeight.Bold).layoutWeight(1).textAlign(TextAlign.Center).margin(right: 40)
             }.width(100.percent).height(60).backgroundColor(Color(0xFFFFFF))
@@ -60,8 +62,11 @@ class ProfileView {
                             Blank()
                             Button("✎ 编辑资料").fontSize(14).fontColor(Color(0x0D9FFB)).backgroundColor(Color.Transparent).height(30)
                                 .onClick({ _ =>
+
                                     let optFn = globalJSFunction.get("OpenEditDialog")
-                                    if (let Some(fn) <- optFn) { fn() }
+if (let Some(fn) <- optFn) {
+    fn.invoke()  // ✅ 正确调用接口内的方法
+}
                                 })
                         }.width(100.percent).margin(bottom: 15)
 
@@ -100,7 +105,9 @@ class ProfileView {
                             .width(100.percent).height(50).backgroundColor(Color(0xFFF0F0)).borderRadius(10).padding(left: 15, right: 15).margin(bottom: 15)
                             .onClick({ _ =>
                                 let optFn = globalJSFunction.get("OpenAuditPage")
-                                if (let Some(fn) <- optFn) { fn() }
+                                if (let Some(fn) <- optFn) {
+                                fn.invoke()  // ✅ 正确调用接口内的方法
+}
                             })
 
                             Button("系统数据大屏 (演示)").width(100.percent).height(45).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF6B6B))
@@ -112,8 +119,10 @@ class ProfileView {
                     Button("退出登录").width(80.percent).height(50).backgroundColor(Color(0xFFF0F0)).fontColor(Color(0xFF4D4F))
                         .margin(bottom: 40)
                         .onClick({ _ =>
-                            let optFn = globalJSFunction.get("LogoutUser")
-                            if (let Some(fn) <- optFn) { fn() }
+                            let optFn = globalJSFunction.get("ProfileGoBack")
+                            if (let Some(fn) <- optFn) {
+                            fn.invoke()  // ✅ 正确调用接口内的方法
+}
                         })
                 }
                 .width(100.percent)
