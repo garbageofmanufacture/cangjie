@@ -40,8 +40,11 @@ class expert_qa {
         }
         .padding(18).backgroundColor(Color(0xFFFFFFFF)).borderRadius(15).margin(bottom: 15)
         .onClick({ _ =>
+            // 👉 1. 标准发货：存入全局字典
             AppStorage.setOrCreate("QADetailQ", q)
             AppStorage.setOrCreate("QADetailA", a)
+
+            // 👉 2. 触发 ArkTS 跳转
             AppStorage.setOrCreate("NavigateToQA", "true")
             this.currentQAIndex = index
         })
