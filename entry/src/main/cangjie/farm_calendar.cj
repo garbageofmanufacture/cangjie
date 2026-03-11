@@ -11,8 +11,6 @@ import ohos.arkui.state_management.*
 class farm_calendar {
     public func build() {
         Column() {
-            Text("传统农事 · 节气").fontSize(22).fontWeight(FontWeight.Bold).fontColor(Color(0x333333)).margin(bottom: 15, top: 15).width(90.percent).textAlign(TextAlign.Start)
-
             // 节气面板
             Row() {
                 Column() {

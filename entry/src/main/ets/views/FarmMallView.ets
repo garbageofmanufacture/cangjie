@@ -19,9 +19,7 @@ export struct FarmMallView {
 
   build() {
     Column() {
-      Text('农业论坛 · 农资商城')
-        .fontSize(24).fontWeight(FontWeight.Bold).margin({ bottom: 20, top: 20 })
-        .textAlign(TextAlign.Center).fontColor('#FF333333')
+
 
       Scroll() {
         Column() {

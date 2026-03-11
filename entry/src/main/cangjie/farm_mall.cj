@@ -11,9 +11,6 @@ import ohos.arkui.state_management.*
 class farm_mall {
     public func build() {
         Column() {
-            Text("农业论坛 · 农资商城")
-                .fontSize(24).fontWeight(FontWeight.Bold).margin(bottom: 20, top: 20)
-                .textAlign(TextAlign.Center).fontColor(Color(0xFF333333))
 
             Scroll() {
                 Column() {

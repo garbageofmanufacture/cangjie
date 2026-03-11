@@ -50,15 +50,15 @@ struct ForumHome {
 
       // 2. 核心容器：Tabs
       Tabs({ barPosition: BarPosition.End, index: this.currentIndex, controller: this.tabsController }) {
-        TabContent() { ForumView() }.tabBar(this.buildBottomNavItem("农事帖子", 0, $r('app.media.startIcon')))
+        TabContent() { ForumView() }.tabBar(this.buildBottomNavItem("农事帖子", 0, $r('app.media.tiezilogo')))
 
-        TabContent() { ExpertQAView() }.tabBar(this.buildBottomNavItem("专家问答", 1, $r('app.media.startIcon')))
+        TabContent() { ExpertQAView() }.tabBar(this.buildBottomNavItem("专家问答", 1, $r('app.media.wendalogo')))
 
         TabContent() { PublishView({ controller: this.tabsController }) }.tabBar(this.buildCenterPublishItem())
 
-        TabContent() { FarmCalendarView() }.tabBar(this.buildBottomNavItem("农事日历", 3, $r('app.media.startIcon')))
+        TabContent() { FarmCalendarView() }.tabBar(this.buildBottomNavItem("农事日历", 3, $r('app.media.rililogo')))
 
-        TabContent() { FarmMallView() }.tabBar(this.buildBottomNavItem("农事商城", 4, $r('app.media.startIcon')))
+        TabContent() { FarmMallView() }.tabBar(this.buildBottomNavItem("农事商城", 4, $r('app.media.shangchenlogo')))
       }
       .barHeight(65)
       .onChange((index: number) => { this.currentIndex = index; })

@@ -76,7 +76,7 @@ struct Index {
 
       // --- 3. 最顶层：毛玻璃高颜值登录面板 ---
       Column() {
-        Image($r('app.media.startIcon'))
+        Image($r('app.media.applogo'))
           .width(80)
           .height(80)
           .margin({ bottom: 15 })

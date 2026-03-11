@@ -16,7 +16,7 @@ export struct ExpertQAView {
 
   build() {
     Column() {
-      Text('农业专家在线解答').fontSize(22).fontWeight(FontWeight.Bold).margin({ bottom: 20, top: 20 })
+
       Scroll() {
         Column() {
           ForEach(this.qaList, (item: QAModel, index: number) => {

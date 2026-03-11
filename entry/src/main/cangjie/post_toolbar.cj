@@ -23,10 +23,9 @@ class PostToolbar {
             }
             .layoutWeight(1).height(40).backgroundColor(Color(0xF5F5F5))
             .borderRadius(20).padding(left: 15).margin(right: 15)
-            // 👇 🌟 核心修改：加上点击事件，跨语言唤起 ArkTS 的弹窗
+            // 👇 跨语言唤起 ArkTS 的弹窗
             .onClick({ _ =>
                 println("🚀🚀🚀 【Cangjie侧】点击事件已触发！准备写入 AppStorage...")
-                // 将当前时间戳写入 AppStorage，确保每次点击值都不同，从而触发 ArkTS 侧的 @Watch
                 let timestamp = DateTime.now().toUnixTimeStamp().toMilliseconds()
                 AppStorage.setOrCreate<Int64>("triggerCommentDialog", timestamp)
                 println("🚀🚀🚀 【Cangjie侧】AppStorage 写入完成，当前值: ${timestamp}")
@@ -48,11 +47,13 @@ class PostToolbar {
             }
             .onClick({ _ =>
                 this.isStarred = !this.isStarred
+                // 👇 🌟 核心新增：加上跨端事件唤起，通知 ArkTS 写入全局收藏夹！
+                let optFn = globalJSFunction.get("AddToFavorite")
+                if (let Some(fn) <- optFn) { fn() }
             })
         }
         .width(100.percent).height(60).backgroundColor(Color(0xFFFFFF))
         .padding(left: 15, right: 15)
-        .border(width: 1, color: Color(0xF0F0F0)) // 补充你注释里说的顶部细灰线边框
-
+        .border(width: 1, color: Color(0xF0F0F0)) // 补充顶部细灰线边框
     }
 }
