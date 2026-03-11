@@ -6,6 +6,10 @@ export declare interface IJSCallback {
 export declare interface IJSCallback {
     invoke: () => void
 }
+
+export declare interface IJSCallback {
+    invoke: () => void
+}
 export declare function testCJ(s: string): string
 
 export function registerJSFunc(arg0: string, arg1: () => void) {
