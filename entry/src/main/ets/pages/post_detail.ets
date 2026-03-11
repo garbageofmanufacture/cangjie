@@ -12,7 +12,6 @@ export interface FavoriteItem {
   type: string;
 }
 
-// 1. 升级评论数据结构
 export class CommentItem {
   id: number = 0;
   post_id: number = 0;
@@ -27,6 +26,7 @@ export class CommentItem {
 export struct CommentInputDialog {
   controller?: CustomDialogController;
   @State inputValue: string = '';
+<<<<<<< HEAD
   postId: number = 0;
 
   @Link parentId: number;
@@ -62,6 +62,14 @@ export struct CommentInputDialog {
   build() {
     Column() {
       Text(this.parentId === 0 ? "发表评论" : `回复 @${this.targetAuthor}`)
+=======
+  @StorageProp('ReplyTargetAuthor') targetAuthor: string = '';
+  onSubmit: (content: string) => void = () => {};
+
+  build() {
+    Column() {
+      Text(this.targetAuthor === '' ? "发表评论" : `回复 @${this.targetAuthor}`)
+>>>>>>> dd3b6d05c6cd0c939cc61c466404ee49d82bc14f
         .fontSize(18).fontWeight(FontWeight.Bold).margin({ bottom: 15 })
 
       TextArea({ placeholder: '请输入内容...', text: this.inputValue })
@@ -71,7 +79,15 @@ export struct CommentInputDialog {
       Row() {
         Button("取消").backgroundColor(Color.Transparent).fontColor('#999999').onClick(() => { this.controller?.close() })
         Blank()
-        Button("发布").backgroundColor('#0D9FFB').onClick(() => { this.submitComment() })
+        Button("发布").backgroundColor('#0D9FFB').onClick(() => {
+          if (this.inputValue.trim() === '') {
+            promptAction.showToast({ message: '内容不能为空' });
+            return;
+          }
+          this.onSubmit(this.inputValue);
+          this.inputValue = '';
+          this.controller?.close();
+        })
       }.width('100%')
     }.padding(20).backgroundColor('#FFFFFF').borderRadius(16).width('90%')
   }
@@ -80,7 +96,7 @@ export struct CommentInputDialog {
 @Entry
 @Component
 struct PostDetail {
-  @State postId: number = 0;
+  @State postId: number = -1; // 🌟 初始值改为 -1，避免和真实 ID 0 冲突
   @State comments: CommentItem[] = [];
 
   @State postTitle: string = '';
@@ -95,23 +111,33 @@ struct PostDetail {
 
   dialogController: CustomDialogController = new CustomDialogController({
     builder: CommentInputDialog({
+<<<<<<< HEAD
       postId: this.postId,
       parentId: $currentReplyParentId,
       targetAuthor: $currentReplyTargetAuthor,
       onCommentSuccess: () => { this.loadComments(); }
+=======
+      onSubmit: (content: string) => {
+        this.submitCommentToDB(content);
+      }
+>>>>>>> dd3b6d05c6cd0c939cc61c466404ee49d82bc14f
     }),
     alignment: DialogAlignment.Bottom,
     customStyle: false
   });
 
   aboutToAppear() {
-    let params = router.getParams() as Record<string, string>;
+    let params = router.getParams() as Record<string, string | number>;
     if (params) {
-      this.postId = Number(params['id']) || 0;
-      this.postTitle = params['title'] || '无标题';
-      this.postAuthor = params['author'] || '匿名';
-      this.postTime = params['time'] || '未知时间';
-      this.postContent = params['content'] || '无正文';
+      // 🌟 核心修复：严格判断 id 是否存在。如果没传，默认给个 1 号帖子，保证能正常存数据库！
+      this.postId = params['id'] !== undefined ? Number(params['id']) : 1;
+      this.postTitle = String(params['title'] || '无标题');
+      this.postAuthor = String(params['author'] || '匿名');
+      this.postTime = String(params['time'] || '未知时间');
+      this.postContent = String(params['content'] || '无正文');
+    } else {
+      // 如果是直接预览页面，没有任何参数，也强制分配给 1 号帖子
+      this.postId = 1;
     }
     this.loadComments();
 
@@ -136,9 +162,31 @@ struct PostDetail {
     cjlib.unregisterJSFunc('AddToFavorite');
   }
 
+  async submitCommentToDB(content: string) {
+    let store = DatabaseHelper.getStore();
+    if (store) {
+      try {
+        await store.insert("Comment", {
+          "post_id": this.postId, // 🌟 此时绝对有值（真实传进来的，或者兜底的 1）
+          "author_id": "热心农友",
+          "content": content,
+          "parent_id": this.currentReplyParentId,
+          "target_author": AppStorage.get<string>('ReplyTargetAuthor') || ''
+        });
+        promptAction.showToast({ message: '发布成功！' });
+        this.loadComments();
+      } catch (err) {
+        console.error("写入数据库失败", err);
+        promptAction.showToast({ message: '发布失败，请检查数据库' });
+      }
+    }
+  }
+
   async loadComments() {
     let store = DatabaseHelper.getStore();
-    if (!store || this.postId === 0) return;
+    // 🌟 去掉之前导致不查数据的 return 判断
+    if (!store) return;
+
     try {
       let predicates = new relationalStore.RdbPredicates("Comment");
       predicates.equalTo("post_id", this.postId);
@@ -146,6 +194,10 @@ struct PostDetail {
 
       let resultSet = await store.query(predicates);
       let tempList: CommentItem[] = [];
+
+      let parentIdCol = resultSet.getColumnIndex("parent_id");
+      let targetAuthorCol = resultSet.getColumnIndex("target_author");
+
       while (resultSet.goToNextRow()) {
         tempList.push({
           id: resultSet.getLong(resultSet.getColumnIndex("id")),
@@ -153,8 +205,13 @@ struct PostDetail {
           author: resultSet.getString(resultSet.getColumnIndex("author_id")),
           content: resultSet.getString(resultSet.getColumnIndex("content")),
           time: "刚刚",
+<<<<<<< HEAD
           parent_id: resultSet.getLong(resultSet.getColumnIndex("parent_id")) || 0,
           target_author: resultSet.getString(resultSet.getColumnIndex("target_author")) || ''
+=======
+          parent_id: parentIdCol !== -1 ? (resultSet.getLong(parentIdCol) || 0) : 0,
+          target_author: targetAuthorCol !== -1 ? (resultSet.getString(targetAuthorCol) || '') : ''
+>>>>>>> dd3b6d05c6cd0c939cc61c466404ee49d82bc14f
         });
       }
       resultSet.close();
@@ -167,7 +224,7 @@ struct PostDetail {
   openCommentDialog() {
     if (this.triggerDialog > 0) {
       this.currentReplyParentId = 0;
-      this.currentReplyTargetAuthor = '';
+      AppStorage.setOrCreate('ReplyTargetAuthor', '');
       this.dialogController.open();
     }
   }
@@ -185,15 +242,12 @@ struct PostDetail {
         Column() {
           Column() {
             Text(this.postTitle).fontSize(32).fontWeight(FontWeight.Bold).fontColor('#333333').width('100%').textAlign(TextAlign.Start).margin({ bottom: 15 })
-
             Row() {
               Text("👤 " + this.postAuthor).fontSize(16).fontColor('#0D9FFB')
               Blank()
               Text(this.postTime).fontSize(14).fontColor('#999999')
             }.width('100%').margin({ bottom: 25 })
-
             Divider().color('#F0F0F0').margin({ bottom: 25 })
-
             Text(this.postContent).fontSize(20).fontColor('#444444').lineHeight(32).width('100%').textAlign(TextAlign.Start)
           }
           .width('90%').padding(20).backgroundColor('#FFFFFF').borderRadius(15).margin({ top: 20 })
@@ -207,7 +261,11 @@ struct PostDetail {
               Column() {
                 Row() {
                   Text(item.author).fontSize(14).fontColor('#666666').fontWeight(FontWeight.Medium)
+<<<<<<< HEAD
                   if (item.parent_id !== 0) {
+=======
+                  if (item.parent_id !== 0 && item.target_author !== '') {
+>>>>>>> dd3b6d05c6cd0c939cc61c466404ee49d82bc14f
                     Text(` 回复 @${item.target_author}`).fontSize(13).fontColor('#0D9FFB').margin({ left: 5 })
                   }
                   Blank()
@@ -225,10 +283,10 @@ struct PostDetail {
               .width('100%').padding({ top: 10, bottom: 5 })
               .onClick(() => {
                 this.currentReplyParentId = item.id;
-                this.currentReplyTargetAuthor = item.author;
+                AppStorage.setOrCreate('ReplyTargetAuthor', item.author);
                 this.dialogController.open();
               })
-            }, (item: CommentItem) => item.id.toString() + "_" + Date.now().toString())
+            }, (item: CommentItem) => item.id.toString())
           }
           .width('90%').padding(20).backgroundColor('#FFFFFF').borderRadius(15).margin({ top: 15, bottom: 20 })
 
@@ -238,7 +296,6 @@ struct PostDetail {
       .layoutWeight(1)
 
       Stack({ alignContent: Alignment.BottomStart }) {
-
         CJHybridComponent({
           library: "ohos_app_cangjie_entry",
           component: "PostToolbar"
@@ -252,10 +309,9 @@ struct PostDetail {
           .backgroundColor(Color.Transparent)
           .onClick(() => {
             this.currentReplyParentId = 0;
-            this.currentReplyTargetAuthor = '';
+            AppStorage.setOrCreate('ReplyTargetAuthor', '');
             this.dialogController.open();
           })
-
       }
       .width('100%')
       .height(60)

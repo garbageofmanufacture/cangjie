@@ -45,6 +45,8 @@ export class DatabaseHelper {
     const sqlQA = `CREATE TABLE IF NOT EXISTS ExpertQA (id INTEGER PRIMARY KEY AUTOINCREMENT, questioner_id TEXT NOT NULL, expert_id TEXT, question TEXT NOT NULL, answer TEXT, status INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
     const sqlCalendar = `CREATE TABLE IF NOT EXISTS Calendar (id INTEGER PRIMARY KEY AUTOINCREMENT, solar_term TEXT NOT NULL, advice TEXT NOT NULL, crop_type TEXT)`;
     const sqlProduct = `CREATE TABLE IF NOT EXISTS Product (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, stock INTEGER DEFAULT 0, image_url TEXT)`;
+
+    // 你写的包含新字段的建表语句，非常正确！
     const sqlComment = `CREATE TABLE IF NOT EXISTS Comment ( id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,author_id TEXT NOT NULL,content TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,parent_id INTEGER DEFAULT 0,target_author TEXT DEFAULT '')`;
 
     try {
@@ -54,12 +56,25 @@ export class DatabaseHelper {
       await DatabaseHelper.rdbStore.executeSql(sqlCalendar);
       await DatabaseHelper.rdbStore.executeSql(sqlProduct);
       await DatabaseHelper.rdbStore.executeSql(sqlComment);
-      hilog.info(0x0000, 'testTag', '✅ 所有核心数据表创建成功！');
+
+      // 🌟 数据库无痛升级补丁：自动为旧版本 App 追加新字段
+      // 加上这两句，你以后都不用手动卸载重装 App 啦！
+      try {
+        await DatabaseHelper.rdbStore.executeSql(`ALTER TABLE Comment ADD COLUMN parent_id INTEGER DEFAULT 0`);
+        await DatabaseHelper.rdbStore.executeSql(`ALTER TABLE Comment ADD COLUMN target_author TEXT DEFAULT ''`);
+        hilog.info(0x0000, 'testTag', '✅ Comment表旧数据字段热升级成功！');
+      } catch (alterErr) {
+        // 如果报错，说明字段已经存在（或者是新安装的App），直接忽略即可，不影响正常运行
+        hilog.info(0x0000, 'testTag', '💡 Comment表字段已是最新，无需热升级。');
+      }
+
+      hilog.info(0x0000, 'testTag', '✅ 所有核心数据表创建/校验成功！');
     } catch (err) {
       hilog.error(0x0000, 'testTag', `❌ 建表执行失败: ${JSON.stringify(err)}`);
     }
   }
 
+<<<<<<< HEAD
   // === 用户相关操作 ===
 
   // 读取真实用户数据
@@ -104,6 +119,11 @@ export class DatabaseHelper {
     // 兼容查询当前登录账号，或者是之前演示用的“热心农友”
     predicates.equalTo("author_id", userId).or().equalTo("author_id", "热心农友");
     predicates.orderByDesc("id"); // 最新发布的排在前面（按ID倒序）
+=======
+  // 🌟 预设管理员 admin 账号
+  private static async initAdminUser(): Promise<void> {
+    if (!DatabaseHelper.rdbStore) return;
+>>>>>>> dd3b6d05c6cd0c939cc61c466404ee49d82bc14f
 
     try {
       let resultSet = await DatabaseHelper.rdbStore.query(predicates);
