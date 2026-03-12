@@ -1,5 +1,7 @@
 // entry/src/main/ets/pages/my_favorite.ets
-import { router } from '@kit.ArkUI';
+import { router, promptAction } from '@kit.ArkUI';
+import { relationalStore } from '@kit.ArkData';
+import { DatabaseHelper } from '../utils/DatabaseHelper';
 
 export class FavoriteItem {
   title: string = '';
@@ -9,8 +11,45 @@ export class FavoriteItem {
 @Entry
 @Component
 struct MyFavoritePage {
-  // 🌟 核心：使用 StorageLink 动态绑定全局收藏夹
-  @StorageLink('MyFavorites') favorites: FavoriteItem[] = [];
+  @State favorites: FavoriteItem[] = [];
+
+  onPageShow() {
+    this.loadFavoritesFromDB();
+  }
+
+  // 🌟 从底层的 SQLite 取数据，彻底解决消失问题
+  async loadFavoritesFromDB() {
+    let store = DatabaseHelper.getStore();
+    if (!store) return;
+    try {
+      let predicates = new relationalStore.RdbPredicates("Favorite");
+      predicates.orderByDesc("created_at");
+      let rs = await store.query(predicates);
+      let temp: FavoriteItem[] = [];
+
+      while(rs.goToNextRow()) {
+        temp.push({
+          title: rs.getString(rs.getColumnIndex("title")) || '未知帖子',
+          type: rs.getString(rs.getColumnIndex("type")) || '未知来源'
+        });
+      }
+      rs.close();
+      this.favorites = temp;
+    } catch(e) {}
+  }
+
+  // 🌟 删除也直接操作数据库
+  async removeFavorite(title: string) {
+    let store = DatabaseHelper.getStore();
+    if (!store) return;
+    try {
+      let predicates = new relationalStore.RdbPredicates("Favorite");
+      predicates.equalTo("title", title);
+      await store.delete(predicates);
+      promptAction.showToast({ message: '已取消收藏' });
+      this.loadFavoritesFromDB(); // 刷新列表
+    } catch (e) {}
+  }
 
   build() {
     Column() {
@@ -38,12 +77,8 @@ struct MyFavoritePage {
                 }.alignItems(HorizontalAlign.Start).layoutWeight(1)
 
                 Text("取消收藏").fontSize(14).fontColor('#FF4D4F')
-                  .onClick(() => {
-                    // 点击取消收藏时，同步更新全局数据池
-                    this.favorites = this.favorites.filter(f => f.title !== item.title);
-                  })
-              }.padding(18).backgroundColor('#FFFFFF').borderRadius(12).width('100%')
-              .shadow({ radius: 10, color: 'rgba(0,0,0,0.05)', offsetX: 0, offsetY: 4 })
+                  .onClick(() => { this.removeFavorite(item.title); })
+              }.padding(18).backgroundColor('#FFFFFF').borderRadius(12).width('100%').shadow({ radius: 10, color: 'rgba(0,0,0,0.05)', offsetX: 0, offsetY: 4 })
             }
           })
         }.width('95%').padding({ top: 15, bottom: 20 }).layoutWeight(1)

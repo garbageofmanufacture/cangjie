@@ -31,3 +31,33 @@ public func registerJSFunc(name: String, fn: IJSCallback): Unit {
 public func unregisterJSFunc(name: String): Unit {
     globalJSFunction.remove(name)
 }
+@Interop[ArkTS]
+public func registerFavCallback( ): Unit {
+    // todo，template code:
+
+}
+@Interop[ArkTS]
+public func testCJ(arg1: String): String {
+    // todo，template code:
+    "template"
+}
+@Interop[ArkTS]
+public func getQA_Question( ): String {
+    // todo，template code:
+    "template"
+}
+@Interop[ArkTS]
+public func getQA_Answer( ): String {
+    // todo，template code:
+    "template"
+}
+@Interop[ArkTS]
+public func syncQA_Action(arg1: Float64,arg2: Float64): Unit {
+    // todo，template code:
+
+}
+@Interop[ArkTS]
+public func registerCommentCallback( ): Unit {
+    // todo，template code:
+
+}

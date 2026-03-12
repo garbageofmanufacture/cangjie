@@ -43,7 +43,8 @@ export class DatabaseHelper {
     const sqlCalendar = `CREATE TABLE IF NOT EXISTS Calendar (id INTEGER PRIMARY KEY AUTOINCREMENT, solar_term TEXT NOT NULL, advice TEXT NOT NULL, crop_type TEXT)`;
     const sqlProduct = `CREATE TABLE IF NOT EXISTS Product (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, stock INTEGER DEFAULT 0, image_url TEXT)`;
     const sqlComment = `CREATE TABLE IF NOT EXISTS Comment ( id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,author_id TEXT NOT NULL,content TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,parent_id INTEGER DEFAULT 0,target_author TEXT DEFAULT '')`;
-
+    // 🌟 核心：新建专属的收藏表！
+    const sqlFavorite = `CREATE TABLE IF NOT EXISTS Favorite (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, type TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
     try {
       await DatabaseHelper.rdbStore.executeSql(sqlUser);
       await DatabaseHelper.rdbStore.executeSql(sqlPost);
@@ -51,6 +52,7 @@ export class DatabaseHelper {
       await DatabaseHelper.rdbStore.executeSql(sqlCalendar);
       await DatabaseHelper.rdbStore.executeSql(sqlProduct);
       await DatabaseHelper.rdbStore.executeSql(sqlComment);
+      await DatabaseHelper.rdbStore.executeSql(sqlFavorite);
       hilog.info(0x0000, 'testTag', '✅ 所有核心数据表创建成功！');
     } catch (err) {
       hilog.error(0x0000, 'testTag', `❌ 建表执行失败: ${JSON.stringify(err)}`);

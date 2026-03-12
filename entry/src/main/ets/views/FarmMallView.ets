@@ -19,8 +19,6 @@ export struct FarmMallView {
 
   build() {
     Column() {
-
-
       Scroll() {
         Column() {
           ForEach(this.productList, (item: ProductModel, index: number) => {
@@ -30,10 +28,17 @@ export struct FarmMallView {
               Text(item.desc).fontSize(14).width('90%').fontColor('#FF555555').textAlign(TextAlign.Start)
             }.width('90%').padding(20).backgroundColor('#FFFFFFFF').borderRadius(10).margin({ bottom: 15 })
             .onClick(() => {
-              AppStorage.setOrCreate('ProductDetailName', item.name);
-              AppStorage.setOrCreate('ProductDetailPrice', item.price);
-              AppStorage.setOrCreate('ProductDetailDesc', item.desc);
-              router.pushUrl({ url: 'pages/product_detail' });
+              // 🌟 核心修复：废弃 AppStorage，改用官方推荐的 router params 传参！
+              // 这样不仅数据精准，还能避免全局变量污染！
+              router.pushUrl({
+                url: 'pages/product_detail',
+                params: {
+                  name: item.name,      // 传给详情页的名字
+                  price: item.price,    // 传给详情页的价格
+                  desc: item.desc,      // 传给详情页的介绍
+                  seller: '农资官方自营店' // 列表里没有卖家，我们这里默认补上一个
+                }
+              });
             })
           }, (item: ProductModel) => item.name)
         }

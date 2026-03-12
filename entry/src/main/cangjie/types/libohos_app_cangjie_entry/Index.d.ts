@@ -1,44 +1,16 @@
-
 export declare interface IJSCallback {
     invoke: () => void
 }
 
-export declare interface IJSCallback {
-    invoke: () => void
-}
-
-export declare interface IJSCallback {
-    invoke: () => void
-}
-export declare function testCJ(s: string): string
-
-export function registerJSFunc(arg0: string, arg1: () => void) {
-  throw new Error('Function not implemented.');
-}
-
-
-export function unregisterJSFunc(arg0: string) {
-  throw new Error('Function not implemented.');
-}
-
+export declare function testCJ(arg1: string): string
 export declare function registerJSFunc(name: string, fn: IJSCallback): void
-
 export declare function unregisterJSFunc(name: string): void
-
-export function getQA_Question(): string {
-  throw new Error('Function not implemented.');
-}
-
-export function getQA_Answer(): string {
-  throw new Error('Function not implemented.');
-}
-
-export function syncQA_Action(likes: number, dislikes: number) {
-  throw new Error('Function not implemented.');
-}
-
 export declare function getQA_Question(): string
-
 export declare function getQA_Answer(): string
+export declare function syncQA_Action(arg1: number, arg2: number): void
 
-export declare function syncQA_Action(likes: number, dislikes: number): void
+// 🌟 只留这个你测试好用的收藏专线！别的全删！
+export declare function registerFavCallback(callback: () => void): void;
+export declare function registerFavCallback(): void
+
+export declare function registerCommentCallback(): void
