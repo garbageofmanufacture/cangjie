@@ -4,7 +4,6 @@ import { preferences, relationalStore } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 import { DatabaseHelper } from '../utils/DatabaseHelper';
 
-// 🌟 核心修复 1：专门为水波纹定义一个标准类，满足 ArkTS 的严格类型要求
 class RippleData {
   id: number = 0;
   x: number = 0;
@@ -17,7 +16,6 @@ class RippleData {
   }
 }
 
-// 独立的水波纹动画组件
 @Component
 struct RippleEffect {
   @Prop x: number;
@@ -26,7 +24,6 @@ struct RippleEffect {
   @State opacityVal: number = 0.6;
 
   aboutToAppear() {
-    // 组件挂载时立刻触发扩散和渐隐动画
     animateTo({ duration: 800, curve: Curve.EaseOut }, () => {
       this.scaleVal = 4.0;
       this.opacityVal = 0;
@@ -37,11 +34,10 @@ struct RippleEffect {
     Circle()
       .width(100)
       .height(100)
-      .fill('#FFFFFF') // 纯白色的涟漪
-      .position({ x: this.x - 50, y: this.y - 50 }) // 让圆心对准点击位置
+      .fill('#FFFFFF')
+      .position({ x: this.x - 50, y: this.y - 50 })
       .scale({ x: this.scaleVal, y: this.scaleVal })
       .opacity(this.opacityVal)
-      // 穿透点击事件，防止波纹挡住下方的输入框和按钮
       .hitTestBehavior(HitTestMode.None)
   }
 }
@@ -53,28 +49,23 @@ struct Index {
   @State pass: string = '';
   @State isRegisterMode: boolean = false;
 
-  // 🌟 核心修复 2：将数组类型指定为刚刚定义的类
   @State ripples: RippleData[] = [];
   private rippleIdCounter: number = 0;
 
   build() {
     Stack() {
-      // --- 1. 最底层：清新农业风的渐变背景 ---
       Column()
         .width('100%')
         .height('100%')
         .linearGradient({
           angle: 135,
-          colors: [['#E0F7FA', 0.0], ['#A5D6A7', 1.0]] // 从清澈浅蓝渐变到生机嫩绿
+          colors: [['#E0F7FA', 0.0], ['#A5D6A7', 1.0]]
         })
 
-      // --- 2. 中间层：根据用户的点击动态渲染水波纹 ---
-      // 🌟 核心修复 3：ForEach 里的参数类型也替换为标准的 RippleData
       ForEach(this.ripples, (item: RippleData) => {
         RippleEffect({ x: item.x, y: item.y })
       }, (item: RippleData) => item.id.toString())
 
-      // --- 3. 最顶层：毛玻璃高颜值登录面板 ---
       Column() {
         Image($r('app.media.applogo'))
           .width(80)
@@ -151,7 +142,6 @@ struct Index {
         let touch = event.touches[0];
         let id = this.rippleIdCounter++;
 
-        // 🌟 核心修复 4：使用 new 关键字实例化类，而不是抛个匿名对象
         this.ripples.push(new RippleData(id, touch.x, touch.y));
 
         setTimeout(() => {
@@ -161,7 +151,6 @@ struct Index {
     })
   }
 
-  // === 业务逻辑保持不变 ===
   async handleRegister() {
     if (this.account.trim() === '' || this.pass.trim() === '') {
       promptAction.showToast({ message: '账号或密码不能为空' });
@@ -217,6 +206,9 @@ struct Index {
       pref.putSync('logged_in_username', username);
       pref.putSync('logged_in_user_role', role);
       await pref.flush();
+
+      // 🌟 核心：把当前账号存进内存，让详情页知道是谁登录的！
+      AppStorage.setOrCreate('currentUserId', this.account);
 
       promptAction.showToast({ message: '登录成功！' });
       router.replaceUrl({ url: 'pages/second' });

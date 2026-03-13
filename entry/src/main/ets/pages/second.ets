@@ -36,7 +36,7 @@ struct ForumHome {
     Column() {
       // 1. 顶部公共导航栏
       Row() {
-        Text("知农论坛").fontSize(22).fontWeight(FontWeight.Bold).fontColor('#0D9FFB')
+        Text("知农").fontSize(22).fontWeight(FontWeight.Bold).fontColor('#0D9FFB')
         Blank()
         Text("👤 我的").fontSize(18).fontWeight(FontWeight.Medium).fontColor('#333333')
           .padding(10)

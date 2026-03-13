@@ -1,8 +1,8 @@
+// entry/src/main/ets/pages/post_detail.ets
 import { CJHybridComponent } from '@cangjie/cjhybridcomponent';
 import { router, promptAction } from '@kit.ArkUI';
 import { relationalStore } from '@kit.ArkData';
 import { DatabaseHelper } from '../utils/DatabaseHelper';
-// 🌟 只留好用的收藏通道
 import { registerFavCallback } from 'libohos_app_cangjie_entry.so';
 
 export class CommentItem {
@@ -74,7 +74,6 @@ struct PostDetail {
     AppStorage.setOrCreate('currentPostTitle', this.postTitle);
 
     try {
-      // 🌟 收藏底层回调原封不动
       registerFavCallback(() => {
         this.executeFavoriteToDB();
       });
@@ -90,9 +89,11 @@ struct PostDetail {
   async checkFavoriteStatusFromDB() {
     let store = DatabaseHelper.getStore();
     if (!store || this.postTitle === '') return;
+    let currentUserId = AppStorage.get<string>('currentUserId') || 'guest';
+
     try {
       let predicates = new relationalStore.RdbPredicates("Favorite");
-      predicates.equalTo("title", this.postTitle);
+      predicates.equalTo("title", this.postTitle).and().equalTo("user_id", currentUserId);
       let rs = await store.query(predicates);
       let found = rs.rowCount > 0;
       rs.close();
@@ -104,14 +105,20 @@ struct PostDetail {
   async executeFavoriteToDB() {
     let store = DatabaseHelper.getStore();
     if (!store) return;
+    let currentUserId = AppStorage.get<string>('currentUserId') || 'guest';
     let targetStatus = !this.localFavorited;
+
     try {
       let predicates = new relationalStore.RdbPredicates("Favorite");
-      predicates.equalTo("title", this.postTitle);
+      predicates.equalTo("title", this.postTitle).and().equalTo("user_id", currentUserId);
       await store.delete(predicates);
 
       if (targetStatus) {
-        let values: relationalStore.ValuesBucket = { "title": this.postTitle, "type": "农事帖子" };
+        let values: relationalStore.ValuesBucket = {
+          "user_id": currentUserId,
+          "title": this.postTitle,
+          "type": "农事帖子"
+        };
         await store.insert("Favorite", values);
         promptAction.showToast({ message: '收藏成功！' });
       } else {
@@ -124,11 +131,32 @@ struct PostDetail {
     }
   }
 
+  // 🌟 核心修复：提交评论时，去获取真实的用户名！
   async submitCommentToDB(content: string) {
     let store = DatabaseHelper.getStore();
     if (store && this.postId !== 0) {
+
+      let currentUserId = AppStorage.get<string>('currentUserId') || 'guest';
+      let displayName = '热心农友'; // 如果没登录，默认用这个
+
+      // 如果当前是登录状态，去 User 表里捞真实数据
+      if (currentUserId !== 'guest') {
+        let profile = await DatabaseHelper.getUserProfile(currentUserId);
+        if (profile && profile.username) {
+          displayName = profile.username; // 拿到了他在注册时生成的昵称（比如 农友_1380）或改过的名字
+        } else {
+          displayName = currentUserId; // 万一查不到名字，用账号兜底
+        }
+      }
+
       try {
-        await store.insert("Comment", { "post_id": this.postId, "author_id": "热心农友", "content": content, "parent_id": this.currentReplyParentId, "target_author": this.currentReplyTargetAuthor });
+        await store.insert("Comment", {
+          "post_id": this.postId,
+          "author_id": displayName, // 🌟 把真实的用户名写进评论表！
+          "content": content,
+          "parent_id": this.currentReplyParentId,
+          "target_author": this.currentReplyTargetAuthor
+        });
         promptAction.showToast({ message: '发布成功！' });
         this.loadComments();
       } catch (err) {}
@@ -171,6 +199,7 @@ struct PostDetail {
             ForEach(this.comments, (item: CommentItem, index: number) => {
               Column() {
                 Row() {
+                  // 🌟 这里会原封不动展示存在数据库里的 author_id（也就是真实用户名）
                   Text(item.author).fontSize(14).fontColor('#666666').fontWeight(FontWeight.Medium)
                   if (item.parent_id !== 0 && item.target_author !== '') { Text(` 回复 @${item.target_author}`).fontSize(13).fontColor('#0D9FFB').margin({ left: 5 }) }
                   Blank(); Text(item.time).fontSize(12).fontColor('#999999')
@@ -192,9 +221,6 @@ struct PostDetail {
         if (this.isDbReady) {
           CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "PostToolbar" }).width('100%').height(60)
 
-          // 🚀 终极物理外挂：透明遮罩层！
-          // 精确覆盖在左侧 65% 的宽度（也就是评论输入框的区域）
-          // 用户点击时，直接被 ArkTS 拦截弹窗，完全避开跨语言通信！
           Row()
             .width('65%')
             .height(60)

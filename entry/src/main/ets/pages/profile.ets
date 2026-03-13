@@ -12,16 +12,87 @@ struct EditProfileDialog {
   @Link address: string
   confirmAction: () => void = () => {}
 
+  // 🌟 1. 新增：邮箱格式错误的状态
+  @State emailError: boolean = false;
+
+  // 🌟 2. 新增：模拟全国省市的数据源（实际开发中通常是一份包含全国的 JSON 配置文件）
+  private cityList: string[] = [
+    '北京市 - 朝阳区', '北京市 - 海淀区',
+    '上海市 - 浦东新区', '上海市 - 徐汇区',
+    '广东省 - 广州市', '广东省 - 深圳市',
+    '湖北省 - 武汉市', '湖北省 - 宜昌市',
+    '四川省 - 成都市', '浙江省 - 杭州市'
+  ];
+
   build() {
     Column({ space: 15 }) {
-      Text('修改个人信息').fontSize(20).fontWeight(FontWeight.Bold).margin({ bottom: 10 })
-      TextInput({ text: this.email, placeholder: '请输入邮箱' }).onChange((v) => this.email = v).height(45).backgroundColor('#F5F5F5')
-      TextInput({ text: this.address, placeholder: '请输入常驻地址' }).onChange((v) => this.address = v).height(45).backgroundColor('#F5F5F5')
+      Text('修改个人信息').fontSize(20).fontWeight(FontWeight.Bold).margin({ bottom: 15 })
+
+      // --- 📧 邮箱输入区（带正则校验） ---
+      Column() {
+        TextInput({ text: this.email, placeholder: '请输入有效邮箱 (如: 123@qq.com)' })
+          .type(InputType.Email)
+          .height(45)
+          .backgroundColor('#F5F5F5')
+          .onChange((v: string) => {
+            this.email = v;
+            // 正则表达式：判断是不是合法的邮箱格式
+            let emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            this.emailError = !emailRegex.test(v) && v.length > 0;
+          })
+
+        // 如果格式错误，展示飘红提示
+        if (this.emailError) {
+          Text("⚠️ 邮箱格式不正确，请重新输入")
+            .fontSize(12)
+            .fontColor('#FF4D4F')
+            .width('100%')
+            .margin({ top: 5, left: 10 })
+        }
+      }.width('100%')
+
+      // --- 📍 地址选择区（调用系统底部滚轮） ---
+      Row() {
+        Text(this.address === '' || this.address === '未填写地址' ? '请选择常驻地址' : this.address)
+          .fontSize(16)
+          .fontColor(this.address === '' || this.address === '未填写地址' ? '#999999' : '#333333')
+          .layoutWeight(1)
+        Text("请选择 >").fontSize(14).fontColor('#0D9FFB')
+      }
+      .width('100%')
+      .height(45)
+      .padding({ left: 15, right: 15 })
+      .backgroundColor('#F5F5F5')
+      .borderRadius(10)
+      .onClick(() => {
+        // 🌟 核心：唤起 ArkUI 系统自带的底部文本选择器
+        TextPickerDialog.show({
+          range: this.cityList,
+          selected: 0,
+          onAccept: (value: TextPickerResult) => {
+            this.address = value.value as string;
+          }
+        })
+      })
+
+      // --- 底部按钮区 ---
       Row({ space: 20 }) {
-        Button('取消').onClick(() => this.controller.close()).backgroundColor('#E0E0E0').fontColor('#333')
-        Button('保存').onClick(() => { this.confirmAction(); this.controller.close(); }).backgroundColor('#0D9FFB')
-      }.margin({ top: 10 })
-    }.padding(20).backgroundColor('#FFFFFF').borderRadius(15)
+        Button('取消').onClick(() => {
+          this.emailError = false;
+          this.controller.close();
+        }).backgroundColor('#E0E0E0').fontColor('#333').layoutWeight(1)
+
+        Button('保存').onClick(() => {
+          if (this.emailError) {
+            promptAction.showToast({ message: '邮箱格式有误，请修改后再保存' });
+            return;
+          }
+          this.confirmAction();
+          this.controller.close();
+        }).backgroundColor('#0D9FFB').layoutWeight(1)
+      }.margin({ top: 15 }).width('100%')
+
+    }.padding(25).backgroundColor('#FFFFFF').borderRadius(16).width('85%')
   }
 }
 
@@ -41,7 +112,8 @@ struct ProfilePage {
       email: $email, address: $address,
       confirmAction: () => { this.saveProfileData(); }
     }),
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    customStyle: true // 开启自定义样式，去掉默认黑边
   })
 
   async aboutToAppear(): Promise<void> {
@@ -80,7 +152,6 @@ struct ProfilePage {
 
   build() {
     Column() {
-      // 🌟 顶部导航栏
       Row() {
         Text("← 返回").fontSize(18).fontColor('#0D9FFB').onClick(() => { try{ router.back() }catch(e){} })
         Blank()
@@ -112,20 +183,14 @@ struct ProfilePage {
               Text("账号: " + this.account).fontSize(14).fontColor('#999999')
             }.width('90%').padding(30).backgroundColor('#FFFFFF').borderRadius(15).margin({ top: 20, bottom: 20 })
 
-            // ==========================================
-            // 🌟 核心修复区：固定高度，消灭大片空白！
-            // ==========================================
             CJHybridComponent({
               library: "ohos_app_cangjie_entry",
               component: "ProfileStatsView",
-              parameter: {
-                "account": this.account
-              }
+              parameter: { "account": this.account }
             })
               .width('100%')
-              .height(110) // 🌟 就是这行代码，把白边彻底压死！
+              .height(110)
               .key(this.refreshKey.toString())
-            // ==========================================
 
             // --- 2. 基础信息区 ---
             Column() {
@@ -158,13 +223,9 @@ struct ProfilePage {
                 Text(">").fontSize(16).fontColor('#CCCCCC')
               }.width('100%').padding({ top: 15, bottom: 15 })
               .onClick(() => {
-                // 🌟 探针 1：只要点到了，绝对会先弹这句话！
                 promptAction.showToast({ message: '正在加载我的发布...' });
-
                 router.pushUrl({ url: 'pages/my_published' }).catch((err: Error) => {
-                  // 🌟 探针 2：如果跳转失败，强制把失败的具体原因弹在屏幕上！
                   promptAction.showToast({ message: `跳转失败，系统报错: ${err.message}` });
-                  console.error("路由跳转失败: ", err);
                 });
               })
 
@@ -184,18 +245,18 @@ struct ProfilePage {
             }.width('90%').padding({ left: 20, right: 20 }).backgroundColor('#FFFFFF').borderRadius(15).margin({ bottom: 20 })
 
             // --- 4. 退出按钮 ---
-            Button("退出登录").width('80%').height(50).backgroundColor('#F0F0F0').fontColor('#FF4D4F')
-              .margin({ top: 20, bottom: 40 })
-              .onClick(async () => {
-                try {
-                  let context = getContext(this) as common.UIAbilityContext;
-                  let pref = await preferences.getPreferences(context, 'LoginPrefs');
-                  await pref.clear();
-                  await pref.flush();
-                  router.clear();
-                  router.replaceUrl({ url: 'pages/Index' }).catch(()=>{});
-                }catch(e){}
+            Button("退出登录")
+              .width('80%')
+              .height(50)
+              .backgroundColor('#FF4D4F')
+              .borderRadius(25)
+              .onClick(() => {
+                AppStorage.setOrCreate('currentUserId', '');
+                router.clear();
+                router.replaceUrl({ url: 'pages/Index' });
+                promptAction.showToast({ message: '已安全退出登录' });
               })
+
           }.width('100%')
         }.width('100%').layoutWeight(1)
       }

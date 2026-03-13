@@ -38,13 +38,14 @@ export class DatabaseHelper {
     if (!DatabaseHelper.rdbStore) return;
 
     const sqlUser = `CREATE TABLE IF NOT EXISTS User (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT UNIQUE NOT NULL, password TEXT NOT NULL, username TEXT NOT NULL, role INTEGER DEFAULT 0, bio TEXT, email TEXT, address TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
+    // 帖子表：里面存了 author_id 来区分是谁发的
     const sqlPost = `CREATE TABLE IF NOT EXISTS Post (id INTEGER PRIMARY KEY AUTOINCREMENT, author_id TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL, views INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
     const sqlQA = `CREATE TABLE IF NOT EXISTS ExpertQA (id INTEGER PRIMARY KEY AUTOINCREMENT, questioner_id TEXT NOT NULL, expert_id TEXT, question TEXT NOT NULL, answer TEXT, status INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
     const sqlCalendar = `CREATE TABLE IF NOT EXISTS Calendar (id INTEGER PRIMARY KEY AUTOINCREMENT, solar_term TEXT NOT NULL, advice TEXT NOT NULL, crop_type TEXT)`;
     const sqlProduct = `CREATE TABLE IF NOT EXISTS Product (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, stock INTEGER DEFAULT 0, image_url TEXT)`;
     const sqlComment = `CREATE TABLE IF NOT EXISTS Comment ( id INTEGER PRIMARY KEY AUTOINCREMENT,post_id INTEGER NOT NULL,author_id TEXT NOT NULL,content TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,parent_id INTEGER DEFAULT 0,target_author TEXT DEFAULT '')`;
-    // 🌟 核心：新建专属的收藏表！
-    const sqlFavorite = `CREATE TABLE IF NOT EXISTS Favorite (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, type TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
+    const sqlFavorite = `CREATE TABLE IF NOT EXISTS Favorite (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, title TEXT NOT NULL, type TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`;
+
     try {
       await DatabaseHelper.rdbStore.executeSql(sqlUser);
       await DatabaseHelper.rdbStore.executeSql(sqlPost);
@@ -89,12 +90,13 @@ export class DatabaseHelper {
     } catch (e) { return false; }
   }
 
+  // 🌟 核心修复：只查当前真实用户的帖子，不再混入其他假数据！
   public static async getMyPosts(userId: string): Promise<PostItemData[]> {
     if (!DatabaseHelper.rdbStore) return [];
 
     let predicates = new relationalStore.RdbPredicates("Post");
-    predicates.equalTo("author_id", userId).or().equalTo("author_id", "热心农友");
-    predicates.orderByDesc("id");
+    predicates.equalTo("author_id", userId);
+    predicates.orderByDesc("id"); // 新发的排在最上面
 
     try {
       let resultSet = await DatabaseHelper.rdbStore.query(predicates);
