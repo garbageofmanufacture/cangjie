@@ -15,7 +15,6 @@ export struct ForumView {
   @State postList: PostModel[] = [];
   @State searchText: string = '';
 
-  // 🌟 核心：监听来自发布页的信号！听到信号立马执行 loadPostsFromDB
   @StorageProp('RefreshForumTrigger') @Watch('loadPostsFromDB') refreshTrigger: number = 0;
 
   aboutToAppear() {
@@ -38,11 +37,15 @@ export struct ForumView {
 
       let temp: PostModel[] = [];
       while (rs.goToNextRow()) {
+        // 🌟 核心修复：必须先从数据库里把 created_at 读出来，赋值给 dbTime！
+        let dbTime = rs.getString(rs.getColumnIndex("created_at"));
+
         temp.push({
           title: rs.getString(rs.getColumnIndex("title")) || '无标题',
           content: rs.getString(rs.getColumnIndex("content")) || '',
           author: rs.getString(rs.getColumnIndex("author_id")) || '匿名农友',
-          time: '刚刚'
+          // 然后这里才能安全地使用 dbTime
+          time: dbTime ? dbTime.substring(5, 16) : '刚刚'
         });
       }
       rs.close();
@@ -54,6 +57,7 @@ export struct ForumView {
         if (this.searchText === '') { this.loadFallback(); }
       }
     } catch(e) {
+      console.error("加载帖子报错：", JSON.stringify(e));
       this.loadFallback();
     }
   }
@@ -61,7 +65,7 @@ export struct ForumView {
   loadFallback() {
     if (this.searchText !== '') return;
     this.postList = [
-      { title: '小麦纹枯病怎么治？', content: '最近地里的小麦出现了纹枯病，请问各位大佬用什么药比较好？', author: '张大爷', time: '10分钟前' }
+      { title: '小麦纹枯病怎么治？', content: '最近地里的小麦出现了纹枯病，请问各位大佬用什么药比较好？', author: '张大爷', time: '刚刚' }
     ];
   }
 
@@ -102,7 +106,7 @@ export struct ForumView {
                 router.pushUrl({ url: 'pages/post_detail', params: { title: item.title, content: item.content, author: item.author, time: item.time }});
               })
             }
-          }, (item: PostModel, index: number) => item.title + index) // 唯一 key 防渲染混乱
+          }, (item: PostModel, index: number) => item.title + index)
         }.padding({ left: 15, right: 15, bottom: 20 }).layoutWeight(1).width('100%')
       }
     }.width('100%').height('100%').backgroundColor('#F4F4F4')

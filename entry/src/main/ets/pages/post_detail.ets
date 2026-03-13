@@ -131,28 +131,26 @@ struct PostDetail {
     }
   }
 
-  // 🌟 核心修复：提交评论时，去获取真实的用户名！
   async submitCommentToDB(content: string) {
     let store = DatabaseHelper.getStore();
     if (store && this.postId !== 0) {
 
       let currentUserId = AppStorage.get<string>('currentUserId') || 'guest';
-      let displayName = '热心农友'; // 如果没登录，默认用这个
+      let displayName = '热心农友';
 
-      // 如果当前是登录状态，去 User 表里捞真实数据
       if (currentUserId !== 'guest') {
         let profile = await DatabaseHelper.getUserProfile(currentUserId);
         if (profile && profile.username) {
-          displayName = profile.username; // 拿到了他在注册时生成的昵称（比如 农友_1380）或改过的名字
+          displayName = profile.username;
         } else {
-          displayName = currentUserId; // 万一查不到名字，用账号兜底
+          displayName = currentUserId;
         }
       }
 
       try {
         await store.insert("Comment", {
           "post_id": this.postId,
-          "author_id": displayName, // 🌟 把真实的用户名写进评论表！
+          "author_id": displayName,
           "content": content,
           "parent_id": this.currentReplyParentId,
           "target_author": this.currentReplyTargetAuthor
@@ -172,9 +170,26 @@ struct PostDetail {
       predicates.orderByAsc("created_at");
       let rs = await store.query(predicates);
       let tempList: CommentItem[] = [];
-      let parentIdCol = rs.getColumnIndex("parent_id"); let targetAuthorCol = rs.getColumnIndex("target_author");
-      while (rs.goToNextRow()) { tempList.push({ id: rs.getLong(rs.getColumnIndex("id")), post_title: this.postTitle, author: rs.getString(rs.getColumnIndex("author_id")), content: rs.getString(rs.getColumnIndex("content")), time: "刚刚", parent_id: parentIdCol !== -1 ? (rs.getLong(parentIdCol) || 0) : 0, target_author: targetAuthorCol !== -1 ? (rs.getString(targetAuthorCol) || '') : '' }); }
-      rs.close(); this.comments = tempList;
+      let parentIdCol = rs.getColumnIndex("parent_id");
+      let targetAuthorCol = rs.getColumnIndex("target_author");
+
+      while (rs.goToNextRow()) {
+        // 🌟 核心修复：读取数据库自动生成的真实时间
+        let dbTime = rs.getString(rs.getColumnIndex("created_at"));
+        let displayTime = dbTime ? dbTime.substring(5, 16) : '刚刚'; // 截取月-日 时:分，例如 "03-13 14:20"
+
+        tempList.push({
+          id: rs.getLong(rs.getColumnIndex("id")),
+          post_title: this.postTitle,
+          author: rs.getString(rs.getColumnIndex("author_id")),
+          content: rs.getString(rs.getColumnIndex("content")),
+          time: displayTime, // 🌟 替换掉原来的 "刚刚"
+          parent_id: parentIdCol !== -1 ? (rs.getLong(parentIdCol) || 0) : 0,
+          target_author: targetAuthorCol !== -1 ? (rs.getString(targetAuthorCol) || '') : ''
+        });
+      }
+      rs.close();
+      this.comments = tempList;
     } catch (err) {}
   }
 
@@ -199,10 +214,9 @@ struct PostDetail {
             ForEach(this.comments, (item: CommentItem, index: number) => {
               Column() {
                 Row() {
-                  // 🌟 这里会原封不动展示存在数据库里的 author_id（也就是真实用户名）
                   Text(item.author).fontSize(14).fontColor('#666666').fontWeight(FontWeight.Medium)
                   if (item.parent_id !== 0 && item.target_author !== '') { Text(` 回复 @${item.target_author}`).fontSize(13).fontColor('#0D9FFB').margin({ left: 5 }) }
-                  Blank(); Text(item.time).fontSize(12).fontColor('#999999')
+                  Blank(); Text(item.time).fontSize(12).fontColor('#999999') // 这里现在显示的是真实系统时间
                 }.width('100%').margin({ bottom: 8 })
                 Text(item.content).fontSize(16).width('100%').padding(item.parent_id !== 0 ? 10 : 0).backgroundColor(item.parent_id !== 0 ? '#F9F9F9' : 'transparent').borderRadius(5)
                 Divider().color('#F0F0F0').margin({ top: 15 })

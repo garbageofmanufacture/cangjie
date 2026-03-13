@@ -7,6 +7,7 @@
     "pages/qa_detail",
     "pages/product_detail",
     "pages/my_published",
-    "pages/my_favorite"
+    "pages/my_favorite",
+    "pages/expert_manage"
   ]
 }
