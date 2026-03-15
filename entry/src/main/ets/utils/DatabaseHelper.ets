@@ -1,5 +1,5 @@
 // entry/src/main/ets/utils/DatabaseHelper.ets
-import { relationalStore } from '@kit.ArkData';
+import { preferences, relationalStore } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 
@@ -13,6 +13,29 @@ export interface PostItemData {
   title: string;
   content: string;
   time: string;
+}
+export class PointManager {
+  static async addPoints(context: common.UIAbilityContext, account: string, points: number) {
+    if (!account || account === '' || account === 'guest') return;
+
+    try {
+      let pref = await preferences.getPreferences(context, 'LoginPrefs');
+
+      let currentPoints = pref.getSync(`user_points_${account}`, 0) as number;
+      let newPoints = currentPoints + points;
+
+      pref.putSync(`user_points_${account}`, newPoints);
+      await pref.flush();
+
+      console.info(`🎉 账号 [${account}] 积分增加 ${points}，当前总积分: ${newPoints}`);
+
+      // 🌟 核心修复：鸣枪！通知个人中心立刻去硬盘拿新积分！
+      AppStorage.setOrCreate('RefreshProfileTrigger', Date.now());
+
+    } catch(e) {
+      console.error("加分失败", JSON.stringify(e));
+    }
+  }
 }
 
 export class DatabaseHelper {

@@ -47,15 +47,31 @@ struct ProfilePage {
   @State address: string = '';
   @State avatarChar: string = '农';
   @State isDataReady: boolean = false;
-  @State refreshKey: number = 0;
 
   @StorageLink('isExpert') isExpert: boolean = false;
 
+  // 🌟 新增：保存真实积分的状态
+  @State currentRealPoints: number = 0;
+  // 🌟 让混合组件随积分变化强制重建的 key
+  @State hybridKey: number = 0;
+  // 🌟 1. 新增：竖起耳朵监听加分信号枪！只要响了，立刻执行 fetchLatestPoints
+  @StorageProp('RefreshProfileTrigger') @Watch('fetchLatestPoints') refreshTrigger: number = 0;
+  // 🌟 2. 新增：专属的刷新方法，去硬盘捞最新积分，并触发仓颉组件刷新
+  async fetchLatestPoints() {
+    if (this.account && this.account !== '') {
+      let context = getContext() as common.UIAbilityContext;
+      let pref = await preferences.getPreferences(context, 'LoginPrefs');
+      // 拿到最新的积分覆盖旧的
+      this.currentRealPoints = pref.getSync(`user_points_${this.account}`, 0) as number;
+      this.hybridKey++; // 积分更新后强制重建混合组件
+    }
+  }
   editDialogController: CustomDialogController = new CustomDialogController({ builder: EditProfileDialog({ email: $email, address: $address, confirmAction: () => { this.saveProfileData(); } }), alignment: DialogAlignment.Center, customStyle: true })
 
   async aboutToAppear(): Promise<void> {
     try {
-      let context = getContext(this) as common.UIAbilityContext;
+      // 🌟 修复警告：不再使用 getContext(this)
+      let context = getContext() as common.UIAbilityContext;
       let pref = await preferences.getPreferences(context, 'LoginPrefs');
 
       this.account = pref.getSync('logged_in_user_id', '未知账号') as string;
@@ -64,6 +80,9 @@ struct ProfilePage {
 
       this.isExpert = pref.getSync(`is_expert_${this.account}`, false) as boolean;
       AppStorage.setOrCreate('isExpert', this.isExpert);
+
+      // 🌟 核心：从硬盘捞出真实积分！
+      this.currentRealPoints = pref.getSync(`user_points_${this.account}`, 0) as number;
 
       let dbProfile: UserProfileInfo | null = await DatabaseHelper.getUserProfile(this.account);
       if (dbProfile) {
@@ -80,7 +99,7 @@ struct ProfilePage {
   async saveProfileData(): Promise<void> {
     try {
       let success = await DatabaseHelper.updateUserProfile(this.account, this.email, this.address);
-      if (success) { this.refreshKey += 1; promptAction.showToast({ message: '资料保存成功' }); }
+      if (success) { promptAction.showToast({ message: '资料保存成功' }); }
     } catch (err) {}
   }
 
@@ -89,7 +108,7 @@ struct ProfilePage {
       promptAction.showToast({ message: '您已经是认证专家了！' });
       return;
     }
-    let context = getContext(this) as common.UIAbilityContext;
+    let context = getContext() as common.UIAbilityContext;
     let pref = await preferences.getPreferences(context, 'LoginPrefs');
     pref.putSync(`is_expert_${this.account}`, true);
     await pref.flush();
@@ -115,7 +134,6 @@ struct ProfilePage {
               Text(this.avatarChar).fontSize(40).fontWeight(FontWeight.Bold).fontColor('#FFFFFF').width(80).height(80).backgroundColor(this.account === 'admin' ? '#FF4D4F' : '#0D9FFB').borderRadius(40).textAlign(TextAlign.Center).margin({ bottom: 15 })
               Row() {
                 Text(this.username).fontSize(24).fontWeight(FontWeight.Bold).fontColor('#333333')
-                // 智能身份徽章：管理员红牌，专家橙牌，普通蓝牌
                 Text(this.account === 'admin' ? "超级管理员" : (this.isExpert ? "认证专家" : "知农用户"))
                   .fontSize(12).fontColor('#FFFFFF')
                   .backgroundColor(this.account === 'admin' ? '#FF4D4F' : (this.isExpert ? '#FF9900' : '#0D9FFB'))
@@ -125,7 +143,16 @@ struct ProfilePage {
               Text("账号: " + this.account).fontSize(14).fontColor('#999999')
             }.width('90%').padding(30).backgroundColor('#FFFFFF').borderRadius(15).margin({ top: 20, bottom: 20 })
 
-            CJHybridComponent({ library: "ohos_app_cangjie_entry", component: "ProfileStatsView", parameter: { "account": this.account } }).width('100%').height(110).key(this.refreshKey.toString())
+            // 🌟 核心修复区：用可变 key 强制重建混合组件，并把数字转成字符串传给仓颉
+            CJHybridComponent({
+              library: "ohos_app_cangjie_entry",
+              component: "ProfileStatsView",
+              parameter: {
+                "account": this.account,
+                "realPointsStr": this.currentRealPoints.toString()
+              }
+            }).key(`profile-stats-${this.hybridKey}`)
+              .width('100%').height(110)
 
             Column() {
               Row() { Text("基本信息").fontSize(18).fontWeight(FontWeight.Bold).fontColor('#333333'); Blank(); Text("✎ 编辑资料").fontSize(14).fontColor('#0D9FFB').onClick(() => { this.editDialogController.open(); }) }.width('100%').margin({ bottom: 20 })
@@ -135,29 +162,16 @@ struct ProfilePage {
             }.width('90%').padding(20).backgroundColor('#FFFFFF').borderRadius(15).margin({ bottom: 20 })
 
             Column() {
-              // ======================================
-              // 🌟 核心：判断是不是管理员账号！
-              // ======================================
               if (this.account === 'admin') {
-                // 如果是 admin 账号，显示“专家权限管理”
-                Row() {
-                  Text("👥 专家权限管理").fontSize(16).fontWeight(FontWeight.Bold).fontColor('#333333')
-                  Blank()
-                  Text("去管理 >").fontSize(14).fontColor('#0D9FFB')
-                }.width('100%').padding({ top: 15, bottom: 15 })
+                Row() { Text("👥 专家权限管理").fontSize(16).fontWeight(FontWeight.Bold).fontColor('#333333'); Blank(); Text("去管理 >").fontSize(14).fontColor('#0D9FFB') }.width('100%').padding({ top: 15, bottom: 15 })
                 .onClick(() => { router.pushUrl({ url: 'pages/expert_manage' }) })
               } else {
-                // 如果是普通账号，还是原来的申请专家
                 Row() {
                   Text(this.isExpert ? "🏅 专家头衔" : "🎓 申请成为专家").fontSize(16).fontColor('#333333')
                   Blank()
-                  if (this.isExpert) {
-                    Text("已认证").fontSize(14).fontColor('#52C41A').backgroundColor('#F6FFED').border({width:1, color:'#B7EB8F'}).padding({left:6,right:6,top:2,bottom:2}).borderRadius(4)
-                  } else {
-                    Text("去认证 >").fontSize(14).fontColor('#0D9FFB')
-                  }
-                }.width('100%').padding({ top: 15, bottom: 15 })
-                .onClick(() => { this.applyExpert(); })
+                  if (this.isExpert) { Text("已认证").fontSize(14).fontColor('#52C41A').backgroundColor('#F6FFED').border({width:1, color:'#B7EB8F'}).padding({left:6,right:6,top:2,bottom:2}).borderRadius(4) }
+                  else { Text("去认证 >").fontSize(14).fontColor('#0D9FFB') }
+                }.width('100%').padding({ top: 15, bottom: 15 }).onClick(() => { this.applyExpert(); })
               }
 
               Divider().color('#F0F0F0')

@@ -1,7 +1,9 @@
 // entry/src/main/ets/views/ExpertQAView.ets
 import { router, promptAction } from '@kit.ArkUI';
 import { relationalStore } from '@kit.ArkData';
-import { DatabaseHelper } from '../utils/DatabaseHelper';
+import { common } from '@kit.AbilityKit';
+import { DatabaseHelper, PointManager } from '../utils/DatabaseHelper';
+import { RichTextRenderer } from '../components/RichTextRenderer';
 
 export class QAModel {
   id: number = 0;
@@ -71,7 +73,11 @@ export struct ExpertQAView {
 
       if (rows > 0) {
         promptAction.showToast({ message: '解答成功，感谢专家的付出！' });
-        // 🌟 提交完立刻重查数据库！
+
+        let currentUserId = AppStorage.get<string>('currentUserId') || 'guest';
+        let context = getContext(this) as common.UIAbilityContext;
+        PointManager.addPoints(context, currentUserId, 10);
+
         this.loadQAsFromDB();
       }
     } catch(e) {
@@ -136,16 +142,19 @@ export struct ExpertQAView {
               Column({ space: 12 }) {
                 Row() {
                   Text("问").fontSize(12).fontColor('#FFFFFF').backgroundColor('#FF6600').padding({ left: 6, right: 6, top: 2, bottom: 2 }).borderRadius(4).margin({ right: 10 })
-                  // 限制问题只显示2行
-                  Text(item.q).fontSize(16).fontWeight(FontWeight.Bold).fontColor('#333333').layoutWeight(1).maxLines(2).textOverflow({overflow: TextOverflow.Ellipsis})
+
+                  // 🌟 核心亮点：使用自研 CjAgriMark 解析引擎渲染富文本
+                  RichTextRenderer({ content: item.q }).layoutWeight(1)
+
                 }.width('100%').alignItems(VerticalAlign.Top)
 
                 Divider().color('#F0F0F0')
 
                 Row() {
                   Text("答").fontSize(12).fontColor('#FFFFFF').backgroundColor('#0D9FFB').padding({ left: 6, right: 6, top: 2, bottom: 2 }).borderRadius(4).margin({ right: 10 })
-                  // 限制答案只显示3行
-                  Text(item.a).fontSize(14).fontColor(item.a.includes('等待') ? '#FF9900' : '#666666').lineHeight(22).layoutWeight(1).maxLines(3).textOverflow({overflow: TextOverflow.Ellipsis})
+
+                  // 🌟 核心亮点：答案部分也使用仓颉解析引擎渲染
+                  RichTextRenderer({ content: item.a }).layoutWeight(1)
 
                   if (this.isExpert && item.a.includes('等待')) {
                     Blank()
@@ -160,7 +169,6 @@ export struct ExpertQAView {
               .padding(18).backgroundColor('#FFFFFF').borderRadius(12)
               .shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 3 })
               .onClick(() => {
-                // 🌟 所有人都可以在点击卡片时进入详情页查看全貌
                 router.pushUrl({
                   url: 'pages/qa_detail',
                   params: { q: item.q, a: item.a }
@@ -168,7 +176,6 @@ export struct ExpertQAView {
               })
             }
           },
-            // 🌟 终极修复：把 item.a 加入 Key 里！只要专家一回答，这段字变了，组件就会强制瞬间刷新！
             (item: QAModel, index: number) => item.id.toString() + "_" + item.a)
         }.padding({ left: 15, right: 15, bottom: 20 }).layoutWeight(1).width('100%')
       }

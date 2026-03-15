@@ -4,7 +4,7 @@ import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
 import { common } from '@kit.AbilityKit';
 import { relationalStore } from '@kit.ArkData';
-import { DatabaseHelper } from '../utils/DatabaseHelper';
+import { DatabaseHelper, PointManager } from '../utils/DatabaseHelper'; // 🌟 导入管理器
 
 @Component
 export struct PublishView {
@@ -46,15 +46,19 @@ export struct PublishView {
     if (!store) { promptAction.showToast({ message: '数据库未就绪' }); return; }
     let currentUserId = AppStorage.get<string>('currentUserId') || 'guest';
 
+    // 🌟 核心修复 2：获取当前合法的前台 UI 页面上下文
+    let context = getContext(this) as common.UIAbilityContext;
+
     try {
       if (this.publishType === 'post') {
         if (!this.newTitle || !this.newContent) { promptAction.showToast({ message: '请填写完整' }); return; }
         let values: relationalStore.ValuesBucket = { "author_id": currentUserId, "title": this.newTitle, "content": this.newContent };
         await store.insert("Post", values);
 
-        // 🌟 核心修复：发射刷新信号！通知帖子列表和“我的发布”立刻去查库！
-        AppStorage.setOrCreate('RefreshForumTrigger', Date.now());
+        // 🌟 核心发帖加分！把 context 传过去
+        PointManager.addPoints(context, currentUserId, 5);
 
+        AppStorage.setOrCreate('RefreshForumTrigger', Date.now());
         this.controller.changeIndex(0);
 
       } else if (this.publishType === 'qa') {
@@ -62,19 +66,17 @@ export struct PublishView {
         let values: relationalStore.ValuesBucket = { "questioner_id": currentUserId, "question": this.newContent, "status": 0 };
         await store.insert("ExpertQA", values);
 
-        // 发射问答刷新信号！
-        AppStorage.setOrCreate('RefreshQATrigger', Date.now());
+        // 🌟 提问也加 2 分鼓励！
+        PointManager.addPoints(context, currentUserId, 2);
 
+        AppStorage.setOrCreate('RefreshQATrigger', Date.now());
         this.controller.changeIndex(1);
 
       } else if (this.publishType === 'product') {
         if (!this.newTitle || !this.newPrice) { promptAction.showToast({ message: '请填写商品名称和价格' }); return; }
         let values: relationalStore.ValuesBucket = { "name": this.newTitle, "price": parseFloat(this.newPrice) || 0, "description": this.newContent || "此商品暂无详细描述", "image_url": this.selectedImageUri };
         await store.insert("Product", values);
-
-        // 发射商城刷新信号！
         AppStorage.setOrCreate('RefreshMallTrigger', Date.now());
-
         this.controller.changeIndex(4);
       }
 
